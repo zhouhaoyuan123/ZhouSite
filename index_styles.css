@@ -11,23 +11,29 @@ body {
     align-items: center;
     min-height: 100vh;
     background-color: #fff;
+    overflow: hidden;
+    padding: 10px;
 }
 
 .container {
     text-align: center;
-    max-width: 800px;
     width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
 .site-header {
     border: 2px solid #000;
     display: inline-block;
-    padding: 20px 40px;
-    margin-bottom: 60px;
+    padding: clamp(10px, 2vh, 20px) clamp(20px, 4vw, 40px);
+    margin-bottom: clamp(20px, 5vh, 60px);
 }
 
 .site-header h1 {
-    font-size: 32px;
+    font-size: clamp(20px, 4vw, 32px);
     font-weight: normal;
     line-height: 1.2;
 }
@@ -35,8 +41,9 @@ body {
 .nav-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 40px;
-    padding: 0 20px;
+    gap: clamp(10px, 2vw, 40px);
+    width: 100%;
+    padding: 0 10px;
 }
 
 .nav-item {
@@ -45,11 +52,14 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-width: 0;
 }
 
 .icon {
-    width: 150px;
-    height: 100px;
+    width: 100%;
+    max-width: 150px;
+    aspect-ratio: 3 / 2;
+    height: auto;
     border: 2px solid #000;
     margin-bottom: 10px;
     position: relative;
