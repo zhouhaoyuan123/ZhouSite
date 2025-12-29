@@ -11,8 +11,7 @@ body {
     align-items: center;
     min-height: 100vh;
     background-color: #fff;
-    overflow: hidden;
-    padding: 10px;
+    padding: 20px;
 }
 
 .container {
@@ -33,7 +32,7 @@ body {
 }
 
 .site-header h1 {
-    font-size: clamp(20px, 4vw, 32px);
+    font-size: clamp(24px, 5vw, 32px);
     font-weight: normal;
     line-height: 1.2;
 }
@@ -41,9 +40,16 @@ body {
 .nav-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: clamp(10px, 2vw, 40px);
+    gap: clamp(20px, 4vw, 40px);
     width: 100%;
     padding: 0 10px;
+}
+
+@media (max-width: 600px) {
+    .nav-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
 }
 
 .nav-item {
@@ -56,16 +62,15 @@ body {
 }
 
 .icon {
-    width: 100%;
-    max-width: 150px;
-    aspect-ratio: 3 / 2;
-    height: auto;
+    width: 150px;
+    height: 100px;
     border: 2px solid #000;
     margin-bottom: 10px;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .label {
