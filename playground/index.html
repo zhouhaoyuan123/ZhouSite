@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zhou Site</title>
-    <link rel="stylesheet" href="index_styles.css">
+    <title>Zhou Site - Playground</title>
+    <link rel="stylesheet" href="../index_styles.css">
     <style>
         .lang-switch {
             position: fixed;
@@ -24,21 +24,22 @@
             background: #000;
             color: #fff;
         }
+        [data-lang="zh"] { display: none; }
     </style>
 </head>
 <body>
     <div class="lang-switch">
-        <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
-        <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">ZH</button>
+        <button class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" onclick="setLang('zh')">ZH</button>
     </div>
 
     <div class="container">
         <header class="site-header">
-            <h1 data-en="Zhou Site" data-zh="周 站">Zhou Site</h1>
+            <h1 data-en="Playground" data-zh="游乐场">Playground</h1>
         </header>
         
         <main class="nav-grid">
-            <a href="/playground" class="nav-item">
+            <a href="/playground/football.html" class="nav-item">
                 <div class="icon playground-icon">
                     <div class="playground-frame">
                         <div class="flag"></div>
@@ -50,26 +51,14 @@
                         </div>
                     </div>
                 </div>
-                <span class="label" data-en="playground" data-zh="游乐场">playground</span>
+                <span class="label" data-en="2-Player Football" data-zh="双人足球">2-Player Football</span>
             </a>
-
-            <a href="/tools" class="nav-item">
-                <div class="icon tools-icon">
-                    <div class="tool-head"></div>
-                    <div class="tool-handle"></div>
+            
+            <a href="/" class="nav-item">
+                <div class="icon">
+                    <span style="font-size: 24px;">🏠</span>
                 </div>
-                <span class="label" data-en="tools" data-zh="工具">tools</span>
-            </a>
-
-            <a href="/blog" class="nav-item">
-                <div class="icon blog-icon">
-                    <div class="blog-lines">
-                        <div class="blog-line"></div>
-                        <div class="blog-line"></div>
-                        <div class="blog-line"></div>
-                    </div>
-                </div>
-                <span class="label" data-en="blog" data-zh="博客">blog</span>
+                <span class="label" data-en="Back to Home" data-zh="回到首页">Back to Home</span>
             </a>
         </main>
     </div>
@@ -80,9 +69,8 @@
                 el.textContent = el.getAttribute('data-' + lang);
             });
             document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
+                btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
             });
-            document.getElementById('btn-' + lang).classList.add('active');
             localStorage.setItem('preferred_lang', lang);
         }
         
