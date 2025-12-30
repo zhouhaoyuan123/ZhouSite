@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zhou Site is a static personal website with a minimalist design aesthetic. The site features a clean, bordered box design language with a simple navigation grid system. It includes a main landing page, a playground section with interactive games (like a football game), and bilingual support (English/Chinese).
+Zhou Site is a static personal website with a minimalist design aesthetic. The site features a clean, bordered visual style with bilingual support (English and Chinese). It serves as a personal landing page with a navigation grid linking to different sections, including a "Playground" area that contains interactive browser-based games.
 
 ## User Preferences
 
@@ -10,42 +10,36 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
-- **Pure HTML/CSS/JavaScript** - No frameworks or build tools; static files served directly
-- **Design Pattern**: Minimalist bordered-box aesthetic with centered layouts
-- **Responsive Design**: Uses CSS clamp() functions and media queries for fluid typography and layouts
-- **Grid-based Navigation**: 3-column grid system that collapses to single column on mobile
+### Frontend-Only Static Site
+- **Structure**: Pure HTML/CSS/JavaScript static website with no backend
+- **Rationale**: Simple personal site with no dynamic data requirements; static hosting is sufficient
+- **Styling**: Custom CSS with responsive design using CSS Grid, clamp() functions, and media queries
+- **Internationalization**: Client-side language switching between English (EN) and Chinese (ZH) using data attributes
 
-### Page Structure
-- `index.html` - Main landing page with navigation grid
-- `playground/index.html` - Sub-section for games and interactive content
-- `playground/football.html` - Canvas-based 2-player football game
-- `404.html` - Custom error page matching site design
+### Page Organization
+- **Root level**: Main landing page (index.html) and 404 error page
+- **Playground section**: Nested directory containing games and interactive content
+- **Shared styles**: Common stylesheet (index_styles.css) imported across pages
 
-### Internationalization (i18n)
-- Client-side language switching using `data-en` and `data-zh` attributes on HTML elements
-- Language preference persisted via localStorage
-- Toggle buttons in fixed position (top-right corner)
+### Design Patterns
+- **Component-based icons**: CSS-drawn icons for navigation items (playground-icon with playground-frame, flag, lines)
+- **Responsive grid layout**: 3-column grid that collapses to single column on mobile (600px breakpoint)
+- **Language toggle**: Fixed-position language switcher with active state styling
 
-### Styling Approach
-- Shared stylesheet (`index_styles.css`) for common styles across pages
-- Page-specific styles embedded in `<style>` tags within each HTML file
-- Black and white color scheme with minimal accent colors
+### Interactive Games
+- **Football game**: Canvas-based browser game with touch controls for mobile devices
+- **Touch support**: Mobile-specific controls with touch-action handling and -webkit-user-select for iOS compatibility
 
 ## External Dependencies
 
 ### Third-Party Services
-- None - This is a fully self-contained static website
+- None currently integrated
 
 ### APIs
-- None
+- None currently integrated
 
 ### Databases
-- None - All content is static HTML
+- None - this is a static site with no data persistence
 
 ### CDN/External Resources
-- None - All assets are local
-
-### Hosting Requirements
-- Any static file server (no server-side processing required)
-- Clean URLs configured (e.g., `/playground` serves `playground/index.html`)
+- None - all assets are self-hosted

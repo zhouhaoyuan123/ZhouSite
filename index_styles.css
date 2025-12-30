@@ -45,10 +45,53 @@ body {
     padding: 0 10px;
 }
 
+.home-link {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    text-decoration: none;
+    font-size: 24px;
+    border: 2px solid #000;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+    color: #000;
+    z-index: 1000;
+}
+
 @media (max-width: 600px) {
+    body {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 80px;
+    }
+
+    .site-header {
+        margin-bottom: 30px;
+        width: 100%;
+    }
+
     .nav-grid {
         grid-template-columns: 1fr;
-        gap: 30px;
+        gap: 20px;
+    }
+
+    .icon {
+        width: 120px;
+        height: 80px;
+    }
+
+    .lang-switch {
+        top: 10px;
+        right: 10px;
+    }
+
+    .home-link {
+        top: 10px;
+        left: 10px;
     }
 }
 
