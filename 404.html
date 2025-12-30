@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <link rel="stylesheet" href="index_styles.css">
+    <style>
+        .error-message {
+            margin-bottom: 30px;
+        }
+        .error-message h2 {
+            font-size: clamp(20px, 4vw, 24px);
+            font-weight: normal;
+        }
+        .back-button {
+            text-decoration: none;
+            color: #000;
+            border: 2px solid #000;
+            padding: 10px 20px;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        .back-button:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="site-header">
+            <h1>404<br>Error</h1>
+        </header>
+        
+        <main>
+            <div class="error-message">
+                <h2>The page you are looking for<br>does not exist.</h2>
+            </div>
+            
+            <a href="/" class="back-button">Back to Home</a>
+        </main>
+    </div>
+</body>
+</html>
