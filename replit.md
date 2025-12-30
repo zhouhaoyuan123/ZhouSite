@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zhou Site is a static personal website featuring a minimalist design with a bilingual interface (English/Chinese). The site includes a main landing page with navigation and a playground section containing interactive browser-based games like a football game built with HTML5 Canvas.
+Zhou Site is a static personal website with a minimalist design aesthetic. The site features a clean, bordered box design language with a simple navigation grid system. It includes a main landing page, a playground section with interactive games (like a football game), and bilingual support (English/Chinese).
 
 ## User Preferences
 
@@ -11,30 +11,41 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **Pure Static Site**: No build tools or frameworks - just vanilla HTML, CSS, and JavaScript
-- **CSS Structure**: Shared styles in `index_styles.css` with page-specific inline styles for customization
-- **Responsive Design**: Uses CSS Grid, Flexbox, and `clamp()` functions for fluid layouts across devices
-- **Internationalization**: Client-side language switching between English (EN) and Chinese (ZH) using `data-en` and `data-zh` attributes on elements
+- **Pure HTML/CSS/JavaScript** - No frameworks or build tools; static files served directly
+- **Design Pattern**: Minimalist bordered-box aesthetic with centered layouts
+- **Responsive Design**: Uses CSS clamp() functions and media queries for fluid typography and layouts
+- **Grid-based Navigation**: 3-column grid system that collapses to single column on mobile
 
-### Directory Structure
-- Root level: Main landing page (`index.html`), shared styles (`index_styles.css`), and error page (`404.html`)
-- `/playground/`: Subsite for interactive games and experiments
+### Page Structure
+- `index.html` - Main landing page with navigation grid
+- `playground/index.html` - Sub-section for games and interactive content
+- `playground/football.html` - Canvas-based 2-player football game
+- `404.html` - Custom error page matching site design
 
-### Interactive Features
-- **Football Game**: HTML5 Canvas-based two-player game with keyboard controls (WASD vs Arrow keys)
-- **Language Toggle**: Persistent language switching using JavaScript with active state styling
+### Internationalization (i18n)
+- Client-side language switching using `data-en` and `data-zh` attributes on HTML elements
+- Language preference persisted via localStorage
+- Toggle buttons in fixed position (top-right corner)
 
-### Design Patterns
-- **Minimalist UI**: Black and white color scheme with bordered elements
-- **Consistent Navigation**: Each subpage includes back links to parent sections
-- **Mobile-First Responsive**: Grid layouts collapse to single column on small screens
+### Styling Approach
+- Shared stylesheet (`index_styles.css`) for common styles across pages
+- Page-specific styles embedded in `<style>` tags within each HTML file
+- Black and white color scheme with minimal accent colors
 
 ## External Dependencies
 
-This project has no external dependencies. It uses:
-- Vanilla HTML5
-- Vanilla CSS3
-- Vanilla JavaScript
-- HTML5 Canvas API for games
+### Third-Party Services
+- None - This is a fully self-contained static website
 
-No package managers, build systems, databases, or third-party services are required.
+### APIs
+- None
+
+### Databases
+- None - All content is static HTML
+
+### CDN/External Resources
+- None - All assets are local
+
+### Hosting Requirements
+- Any static file server (no server-side processing required)
+- Clean URLs configured (e.g., `/playground` serves `playground/index.html`)
