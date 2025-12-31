@@ -6,7 +6,7 @@ channel = "stable-24_11"
 packages = ["static-web-server"]
 
 [deployment]
-publicDir = "/dist"
+publicDir = "dist"
 deploymentTarget = "static"
 build = ["sh", "-c", "sh build.sh"]
 
