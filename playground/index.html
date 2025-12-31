@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
             display: flex;
             gap: 10px;
         }
+
         .lang-btn {
             background: #fff;
             border: 2px solid #000;
@@ -21,13 +23,18 @@
             cursor: pointer;
             font-size: 14px;
         }
+
         .lang-btn.active {
             background: #000;
             color: #fff;
         }
-        [data-lang="zh"] { display: none; }
+
+        [data-lang="zh"] {
+            display: none;
+        }
     </style>
 </head>
+
 <body>
     <a href="/" class="home-link">🏠</a>
     <div class="lang-switch">
@@ -39,7 +46,7 @@
         <header class="site-header">
             <h1 data-en="Playground" data-zh="游乐场">Playground</h1>
         </header>
-        
+
         <main class="nav-grid">
             <a href="/playground/football.html" class="nav-item">
                 <div class="icon playground-icon">
@@ -60,6 +67,7 @@
 
     <script>
         function setLang(lang) {
+            document.documentElement.lang = lang;
             document.querySelectorAll('[data-en]').forEach(el => {
                 el.textContent = el.getAttribute('data-' + lang);
             });
@@ -68,9 +76,15 @@
             });
             localStorage.setItem('preferred_lang', lang);
         }
-        
-        const savedLang = localStorage.getItem('preferred_lang') || 'en';
+
+        function getPreferredLanguage() {
+            var language = navigator.language || navigator.languages[0] || "en";
+            return language.split(",")[0];
+        }
+
+        const savedLang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
         setLang(savedLang);
     </script>
 </body>
+
 </html>
