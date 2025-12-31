@@ -6,9 +6,9 @@ channel = "stable-24_11"
 packages = ["static-web-server"]
 
 [deployment]
-publicDir = "/"
+publicDir = "/dist"
 deploymentTarget = "static"
-build = ["sh", "-c", "./build.sh"]
+build = ["sh", "-c", "sh build.sh"]
 
 [workflows]
 runButton = "Serve static"

@@ -78,7 +78,7 @@
         }
 
         function getPreferredLanguage() {
-            var language = navigator.language || navigator.languages[0] || "en";
+            var language = navigator.language.substring(0,2) || navigator.languages[0].substring(0,2) || "en";
             return language.split(",")[0];
         }
 
