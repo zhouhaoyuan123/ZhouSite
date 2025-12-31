@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zhou Site</title>
+    <link rel="stylesheet" href="index_styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .lang-btn.active {
+            background: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="lang-switch">
+        <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">ZH</button>
+    </div>
+
+    <div class="container">
+        <header class="site-header">
+            <h1 data-en="Zhou Site" data-zh="周 站">Zhou Site</h1>
+        </header>
+
+        <main class="nav-grid">
+            <a href="/playground" class="nav-item">
+                <div class="icon playground-icon">
+                    <div class="playground-frame">
+                        <div class="flag"></div>
+                        <div class="playground-lines">
+                            <div class="line vertical"></div>
+                            <div class="line vertical"></div>
+                            <div class="line vertical"></div>
+                            <div class="line horizontal"></div>
+                        </div>
+                    </div>
+                </div>
+                <span class="label" data-en="playground" data-zh="游乐场">playground</span>
+            </a>
+
+            <a href="/tools" class="nav-item">
+                <div class="icon tools-icon">
+                    <div class="tool-head"></div>
+                    <div class="tool-handle"></div>
+                </div>
+                <span class="label" data-en="tools" data-zh="工具">tools</span>
+            </a>
+
+            <a href="/blog" class="nav-item">
+                <div class="icon blog-icon">
+                    <div class="blog-lines">
+                        <div class="blog-line"></div>
+                        <div class="blog-line"></div>
+                        <div class="blog-line"></div>
+                    </div>
+                </div>
+                <span class="label" data-en="blog" data-zh="博客">blog</span>
+            </a>
+        </main>
+    </div>
+
+    <script>
+        function setLang(lang) {
+            document.documentElement.lang = lang;
+            document.querySelectorAll('[data-en]').forEach(el => {
+                el.textContent = el.getAttribute('data-' + lang);
+            });
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('btn-' + lang).classList.add('active');
+            localStorage.setItem('preferred_lang', lang);
+        }
+
+        function getPreferredLanguage() {
+            var language = navigator.language || navigator.languages[0] || "en";
+            return language.split(",")[0];
+        }
+
+        const savedLang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
+        setLang(savedLang);
+    </script>
+</body>
+
+</html>

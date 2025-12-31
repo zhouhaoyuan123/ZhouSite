@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Game - Zhou Site</title>
+    <link rel="stylesheet" href="../index_styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        body {
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            background: #2e7d32;
+            border: 4px solid #fff;
+            display: block;
+            margin: 10px auto;
+            max-width: 95vw;
+            max-height: 60vh;
+            touch-action: none;
+        }
+
+        .controls-info {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .mobile-controls {
+            justify-content: space-between;
+            padding: 10px 20px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        @media (max-pointer: coarse) {
+            .mobile-controls {
+                display: flex;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .touch-btn {
+            display: none;
+            width: 60px;
+            height: 60px;
+            border: 2px solid #000;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .touch-btn:active {
+            background: #000;
+            color: #fff;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin: 10px auto;
+            color: #000;
+            text-decoration: none;
+            border: 2px solid #000;
+            padding: 8px 16px;
+            width: fit-content;
+        }
+    </style>
+</head>
+
+<body>
+    <a href="/" class="home-link">🏠</a>
+    <div class="container">
+        <header class="site-header">
+            <h1 id="scoreBoard">P1: 0 | P2: 0</h1>
+        </header>
+
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div class="mobile-controls">
+            <div class="control-group">
+                <div class="touch-btn" id="p1-up">↑</div>
+                <div class="touch-btn" id="p1-down">↓</div>
+            </div>
+            <div class="control-group">
+                <div class="touch-btn" id="p2-up">↑</div>
+                <div class="touch-btn" id="p2-down">↓</div>
+            </div>
+        </div>
+
+        <div class="controls-info">
+            <p data-en="P1: WASD | P2: Arrows" data-zh="玩家1: WASD | 玩家2: 方向键">P1: WASD | P2: Arrows</p>
+        </div>
+
+        <a href="/playground" class="back-link" data-en="Back to Playground" data-zh="返回游乐场">Back to Playground</a>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreBoard = document.getElementById('scoreBoard');
+
+        let p1Score = 0;
+        let p2Score = 0;
+
+        const ball = {x: 400, y: 200, dx: 4, dy: 4, radius: 10};
+
+        const p1 = {x: 50, y: 150, width: 20, height: 100, dy: 5};
+        const p2 = {x: 730, y: 150, width: 20, height: 100, dy: 5};
+
+        const keys = {};
+
+        // Keyboard events
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Touch controls setup
+        const touchState = {
+            p1Up: false, p1Down: false,
+            p2Up: false, p2Down: false
+        };
+
+        function isMobile() {
+            const userAgentCheck = /Mobi|Android/i.test(navigator.userAgent);
+            return userAgentCheck;
+        }
+        
+        function bindTouch(id, stateKey) {
+            const btn = document.getElementById(id);  
+            if (!isMobile()) {
+                btn.style.display = 'none';
+                return; // Don't bind if not a touch device
+            }
+            btn.addEventListener('touchstart', (e) => {e.preventDefault(); touchState[stateKey] = true;});
+            btn.addEventListener('touchend', (e) => {e.preventDefault(); touchState[stateKey] = false;});
+        }
+
+        bindTouch('p1-up', 'p1Up');
+        bindTouch('p1-down', 'p1Down');
+        bindTouch('p2-up', 'p2Up');
+        bindTouch('p2-down', 'p2Down');
+
+        function update() {
+            // P1 movement
+            if ((keys['KeyW'] || touchState.p1Up) && p1.y > 0) p1.y -= p1.dy;
+            if ((keys['KeyS'] || touchState.p1Down) && p1.y < canvas.height - p1.height) p1.y += p1.dy;
+
+            // P2 movement
+            if ((keys['ArrowUp'] || touchState.p2Up) && p2.y > 0) p2.y -= p2.dy;
+            if ((keys['ArrowDown'] || touchState.p2Down) && p2.y < canvas.height - p2.height) p2.y += p2.dy;
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Wall collision
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) ball.dy *= -1;
+
+            // Paddle collision
+            if (
+                (ball.x - ball.radius < p1.x + p1.width && ball.y > p1.y && ball.y < p1.y + p1.height) ||
+                (ball.x + ball.radius > p2.x && ball.y > p2.y && ball.y < p2.y + p2.height)
+            ) {
+                ball.dx *= -1.1; // Speed up
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                p2Score++;
+                resetBall();
+            } else if (ball.x > canvas.width) {
+                p1Score++;
+                resetBall();
+            }
+
+            scoreBoard.textContent = `P1: ${p1Score} | P2: ${p2Score}`;
+        }
+
+        function resetBall() {
+            ball.x = 400;
+            ball.y = 200;
+            ball.dx = 4 * (Math.random() > 0.5 ? 1 : -1);
+            ball.dy = 4 * (Math.random() > 0.5 ? 1 : -1);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Ball
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.closePath();
+
+            // Draw Players
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(p1.x, p1.y, p1.width, p1.height);
+            ctx.fillRect(p2.x, p2.y, p2.width, p2.height);
+
+            // Draw Goals
+            ctx.strokeStyle = '#fff';
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(400, 0);
+            ctx.lineTo(400, 400);
+            ctx.stroke();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+
+        // Simple i18n
+        function getPreferredLanguage() {
+            var language = navigator.language || navigator.languages[0] || "en";
+            return language.split(",")[0];
+        }
+
+        const lang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
+        document.documentElement.lang = lang;
+        document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+            el.textContent = el.getAttribute('data-' + lang);
+        });
+    </script>
+</body>
+
+</html>

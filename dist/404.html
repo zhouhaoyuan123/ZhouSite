@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <link rel="stylesheet" href="index_styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        .error-message {
+            margin-bottom: 30px;
+        }
+
+        .error-message h2 {
+            font-size: clamp(20px, 4vw, 24px);
+            font-weight: normal;
+        }
+
+        .back-button {
+            text-decoration: none;
+            color: #000;
+            border: 2px solid #000;
+            padding: 10px 20px;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .back-button:hover {
+            background-color: #f0f0f0;
+        }
+
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .lang-btn.active {
+            background: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="lang-switch">
+        <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">ZH</button>
+    </div>
+    <div class="container">
+        <header class="site-header">
+            <h1 data-en="404 Error" data-zh="404 错误">404<br>Error</h1>
+        </header>
+
+        <main>
+            <div class="error-message">
+                <h2 data-en="The page you are looking for does not exist." data-zh="您查找的页面不存在。">The page you are looking
+                    for<br>does not exist.</h2>
+            </div>
+
+            <a href="/" class="back-button" data-en="Back to Home" data-zh="返回首页">Back to Home</a>
+        </main>
+    </div>
+    <script>
+        function setLang(lang) {
+            document.documentElement.lang = lang;
+            document.querySelectorAll('[data-en]').forEach(el => {
+                el.textContent = el.getAttribute('data-' + lang);
+            });
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const btn = document.getElementById('btn-' + lang);
+            if (btn) btn.classList.add('active');
+            localStorage.setItem('preferred_lang', lang);
+        }
+
+        function getPreferredLanguage() {
+            var language = navigator.language || navigator.languages[0] || "en";
+            return language.split(",")[0];
+        }
+
+        const savedLang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
+        setLang(savedLang);
+    </script>
+</body>
+
+</html>
