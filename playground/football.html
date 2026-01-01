@@ -323,19 +323,8 @@
         }
 
         loop();
-
-        // Simple i18n
-        function getPreferredLanguage() {
-            var language = navigator.language.substring(0,2) || navigator.languages[0].substring(0,2) || "en";
-            return language.split(",")[0];
-        }
-
-        const lang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
-        document.documentElement.lang = lang;
-        document.querySelectorAll('[data-' + lang + ']').forEach(el => {
-            el.textContent = el.getAttribute('data-' + lang);
-        });
     </script>
+    <script src="/i18n.js"></script>
 </body>
 
 </html>

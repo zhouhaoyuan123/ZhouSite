@@ -72,28 +72,7 @@
             <a href="/" class="back-button" data-en="Back to Home" data-zh="返回首页">Back to Home</a>
         </main>
     </div>
-    <script>
-        function setLang(lang) {
-            document.documentElement.lang = lang;
-            document.querySelectorAll('[data-en]').forEach(el => {
-                el.textContent = el.getAttribute('data-' + lang);
-            });
-            document.querySelectorAll('.lang-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            const btn = document.getElementById('btn-' + lang);
-            if (btn) btn.classList.add('active');
-            localStorage.setItem('preferred_lang', lang);
-        }
-
-        function getPreferredLanguage() {
-            var language = navigator.language.substring(0,2) || navigator.languages[0].substring(0,2) || "en";
-            return language.split(",")[0];
-        }
-
-        const savedLang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
-        setLang(savedLang);
-    </script>
+    <script src="/i18n.js"></script>
 </body>
 
 </html>
