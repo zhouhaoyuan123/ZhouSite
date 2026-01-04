@@ -265,11 +265,24 @@
             if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) ball.dy *= -1;
 
             // Paddle collision
-            if (
-                (ball.x - ball.radius < p1.x + p1.width && ball.y > p1.y && ball.y < p1.y + p1.height) ||
-                (ball.x + ball.radius > p2.x && ball.y > p2.y && ball.y < p2.y + p2.height)
-            ) {
-                ball.dx *= -1.1; // Speed up
+            // P1 collision (Left paddle)
+            if (ball.dx < 0 && 
+                ball.x - ball.radius < p1.x + p1.width && 
+                ball.x - ball.radius > p1.x &&
+                ball.y > p1.y && 
+                ball.y < p1.y + p1.height) {
+                ball.dx *= -1.1;
+                ball.x = p1.x + p1.width + ball.radius; // Resolve overlap
+                ball.dx = Math.min(Math.max(ball.dx, -10), 10);
+            }
+            // P2 collision (Right paddle)
+            if (ball.dx > 0 && 
+                ball.x + ball.radius > p2.x && 
+                ball.x + ball.radius < p2.x + p2.width &&
+                ball.y > p2.y && 
+                ball.y < p2.y + p2.height) {
+                ball.dx *= -1.1;
+                ball.x = p2.x - ball.radius; // Resolve overlap
                 ball.dx = Math.min(Math.max(ball.dx, -10), 10);
             }
 
