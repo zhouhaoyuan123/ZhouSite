@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-en="Emoji Maker - Zhou Site" data-zh="表情制作器 - 周 站">Emoji Maker - Zhou Site</title>
+    <link rel="stylesheet" href="../index_styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        .maker-container {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 900px;
+            width: 95%;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        @media (max-width: 800px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .design-area, .controls-panel {
+            border: 2px solid #000;
+            padding: 20px;
+        }
+
+        .dot-grid-container {
+            overflow: auto;
+            border: 2px solid #000;
+            margin: 10px 0;
+            background: #eee;
+            padding: 10px;
+        }
+
+        .dot-grid {
+            display: grid;
+            background: #000;
+            margin: 0 auto;
+            width: fit-content;
+        }
+
+        .dot {
+            background: #fff;
+            aspect-ratio: 1;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+
+        .dot.active {
+            background: #000;
+        }
+
+        .braille-output {
+            font-family: monospace;
+            font-size: 1.5rem;
+            border: 2px solid #000;
+            padding: 10px;
+            min-height: 100px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .btn {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn.danger:hover {
+            background: #f00;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="home-link">🏠</a>
+    <div class="container">
+        <header class="site-header">
+            <h1 data-en="Emoji Maker" data-zh="表情制作器">Emoji Maker</h1>
+        </header>
+
+        <div class="maker-container">
+            <div class="main-content">
+                <div class="design-area">
+                    <h2 data-en="Design Grid" data-zh="设计网格">Design Grid</h2>
+                    
+                    <div class="grid-controls">
+                        <div class="control-group">
+                            <label data-en="Width (Chars):" data-zh="宽度 (字符):">Width (Chars):</label>
+                            <input type="range" id="gridWidth" min="1" max="12" value="4">
+                        </div>
+                        <div class="control-group">
+                            <label data-en="Height (Chars):" data-zh="高度 (字符):">Height (Chars):</label>
+                            <input type="range" id="gridHeight" min="1" max="12" value="3">
+                        </div>
+                    </div>
+
+                    <div class="dot-grid-container" id="gridContainer"></div>
+
+                    <div class="button-row">
+                        <button id="clearBtn" class="btn danger" data-en="Clear" data-zh="清除">Clear</button>
+                        <button id="randomBtn" class="btn" data-en="Random" data-zh="随机">Random</button>
+                    </div>
+                </div>
+
+                <div class="controls-panel">
+                    <h2 data-en="Output" data-zh="输出">Output</h2>
+                    <div class="braille-output" id="brailleOutput"></div>
+                    <button id="copyBtn" class="btn" data-en="Copy Braille" data-zh="复制表情">Copy Braille</button>
+
+                    <h3 data-en="Presets" data-zh="预设" style="margin-top:20px">Presets</h3>
+                    <div class="preset-grid">
+                        <button class="btn preset-btn" data-preset="heart">❤</button>
+                        <button class="btn preset-btn" data-preset="smile">😊</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <a href="/tools" class="back-link" data-en="Back to Tools" data-zh="返回工具">Back to Tools</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridContainer = document.getElementById('gridContainer');
+            const brailleOutput = document.getElementById('brailleOutput');
+            const widthSlider = document.getElementById('gridWidth');
+            const heightSlider = document.getElementById('gridHeight');
+            const clearBtn = document.getElementById('clearBtn');
+            const randomBtn = document.getElementById('randomBtn');
+            const copyBtn = document.getElementById('copyBtn');
+
+            let grid = [];
+            const BRAILLE_WIDTH = 2;
+            const BRAILLE_HEIGHT = 4;
+
+            function initGrid() {
+                const w = parseInt(widthSlider.value) * BRAILLE_WIDTH;
+                const h = parseInt(heightSlider.value) * BRAILLE_HEIGHT;
+                grid = Array(h).fill().map(() => Array(w).fill(false));
+                renderGrid();
+            }
+
+            function renderGrid() {
+                const w = grid[0].length;
+                const h = grid.length;
+                gridContainer.innerHTML = '';
+                const gridEl = document.createElement('div');
+                gridEl.className = 'dot-grid';
+                gridEl.style.gridTemplateColumns = `repeat(${w}, 20px)`;
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot' + (grid[y][x] ? ' active' : '');
+                        dot.onclick = () => {
+                            grid[y][x] = !grid[y][x];
+                            dot.classList.toggle('active');
+                            updateOutput();
+                        };
+                        gridEl.appendChild(dot);
+                    }
+                }
+                gridContainer.appendChild(gridEl);
+                updateOutput();
+            }
+
+            function updateOutput() {
+                let text = '';
+                const bw = parseInt(widthSlider.value);
+                const bh = parseInt(heightSlider.value);
+
+                for (let y = 0; y < bh; y++) {
+                    for (let x = 0; x < bw; x++) {
+                        let code = 0;
+                        const dotMap = [
+                            [0, 0, 1],   // Dot 1
+                            [1, 0, 2],   // Dot 2
+                            [2, 0, 4],   // Dot 3
+                            [0, 1, 8],   // Dot 4
+                            [1, 1, 16],  // Dot 5
+                            [2, 1, 32],  // Dot 6
+                            [3, 0, 64],  // Dot 7
+                            [3, 1, 128]  // Dot 8
+                        ];
+
+                        dotMap.forEach(([dy, dx, bit]) => {
+                            if (grid[y * 4 + dy] && grid[y * 4 + dy][x * 2 + dx]) {
+                                code += bit;
+                            }
+                        });
+                        text += String.fromCharCode(0x2800 + code);
+                    }
+                    text += '\n';
+                }
+                brailleOutput.textContent = text;
+            }
+
+            widthSlider.oninput = initGrid;
+            heightSlider.oninput = initGrid;
+            clearBtn.onclick = initGrid;
+            
+            randomBtn.onclick = () => {
+                grid = grid.map(row => row.map(() => Math.random() > 0.8));
+                renderGrid();
+            };
+
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(brailleOutput.textContent);
+                const originalText = copyBtn.getAttribute('data-en');
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 1000);
+            };
+
+            initGrid();
+        });
+    </script>
+    <script src="/i18n.js"></script>
+</body>
+</html>
