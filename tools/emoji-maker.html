@@ -34,8 +34,9 @@
             border: 2px solid #000;
             padding: 20px;
             margin: 20px auto;
-            max-width: 900px;
+            max-width: 1000px;
             width: 95%;
+            box-sizing: border-box;
         }
 
         .main-content {
@@ -44,15 +45,23 @@
             gap: 20px;
         }
 
-        @media (max-width: 800px) {
+        @media (max-width: 900px) {
             .main-content {
                 grid-template-columns: 1fr;
+            }
+            .controls-panel {
+                order: 2;
+            }
+            .design-area {
+                order: 1;
             }
         }
 
         .design-area, .controls-panel {
             border: 2px solid #000;
             padding: 20px;
+            min-width: 0;
+            background: #fff;
         }
 
         .dot-grid-container {
@@ -61,6 +70,7 @@
             margin: 10px 0;
             background: #eee;
             padding: 10px;
+            max-height: 60vh;
         }
 
         .dot-grid {
@@ -68,28 +78,41 @@
             background: #000;
             margin: 0 auto;
             width: fit-content;
+            gap: 1px;
+            border: 1px solid #000;
         }
 
         .dot {
             background: #fff;
-            aspect-ratio: 1;
+            width: 20px;
+            height: 20px;
             cursor: pointer;
-            border: 1px solid #ddd;
+            box-sizing: border-box;
         }
 
         .dot.active {
             background: #000;
         }
 
+        .dot:hover {
+            background: #f0f0f0;
+        }
+        .dot.active:hover {
+            background: #333;
+        }
+
         .braille-output {
-            font-family: monospace;
+            font-family: "Courier New", Courier, monospace;
             font-size: 1.5rem;
             border: 2px solid #000;
             padding: 10px;
             min-height: 100px;
-            white-space: pre-wrap;
-            word-break: break-all;
+            white-space: pre;
+            word-break: normal;
             margin: 10px 0;
+            overflow: auto;
+            background: #f9f9f9;
+            line-height: 1.2;
         }
 
         .btn {
@@ -99,6 +122,7 @@
             cursor: pointer;
             font-weight: bold;
             margin: 5px;
+            transition: all 0.2s;
         }
 
         .btn:hover {
@@ -108,6 +132,7 @@
 
         .btn.danger:hover {
             background: #f00;
+            border-color: #f00;
         }
 
         .control-group {
@@ -192,6 +217,7 @@
             const clearBtn = document.getElementById('clearBtn');
             const randomBtn = document.getElementById('randomBtn');
             const copyBtn = document.getElementById('copyBtn');
+            const presetBtns = document.querySelectorAll('.preset-btn');
 
             let grid = [];
             let isDrawing = false;
@@ -199,15 +225,53 @@
             const BRAILLE_WIDTH = 2;
             const BRAILLE_HEIGHT = 4;
 
-            function initGrid() {
-                const w = parseInt(widthSlider.value) * BRAILLE_WIDTH;
-                const h = parseInt(heightSlider.value) * BRAILLE_HEIGHT;
-                grid = Array(h).fill().map(() => Array(w).fill(false));
+            const PRESETS = {
+                heart: [
+                    [0,1,1,0,0,1,1,0],
+                    [1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1],
+                    [0,1,1,1,1,1,1,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,0,0,1,1,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ],
+                smile: [
+                    [0,0,1,1,1,1,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [1,0,1,0,0,1,0,1],
+                    [1,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,0,1],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            };
+
+            function initGrid(preserve = true) {
+                const bw = parseInt(widthSlider.value);
+                const bh = parseInt(heightSlider.value);
+                const w = bw * BRAILLE_WIDTH;
+                const h = bh * BRAILLE_HEIGHT;
+                
+                const newGrid = Array(h).fill().map(() => Array(w).fill(false));
+                
+                if (preserve && grid.length > 0) {
+                    const oldH = grid.length;
+                    const oldW = grid[0].length;
+                    for (let y = 0; y < Math.min(h, oldH); y++) {
+                        for (let x = 0; x < Math.min(w, oldW); x++) {
+                            newGrid[y][x] = grid[y][x];
+                        }
+                    }
+                }
+                
+                grid = newGrid;
                 renderGrid();
             }
 
             function handleDotAction(x, y, dot) {
-                if (grid[y][x] !== currentMode) {
+                if (grid[y] && grid[y][x] !== undefined && grid[y][x] !== currentMode) {
                     grid[y][x] = currentMode;
                     dot.classList.toggle('active', currentMode);
                     updateOutput();
@@ -217,11 +281,15 @@
             function renderGrid() {
                 const w = grid[0].length;
                 const h = grid.length;
+                
+                // Clear and rebuild to avoid complex DOM diffing, 
+                // but we use a fragment for better performance
                 gridContainer.innerHTML = '';
                 const gridEl = document.createElement('div');
                 gridEl.className = 'dot-grid';
                 gridEl.style.gridTemplateColumns = `repeat(${w}, 20px)`;
 
+                const fragment = document.createDocumentFragment();
                 for (let y = 0; y < h; y++) {
                     for (let x = 0; x < w; x++) {
                         const dot = document.createElement('div');
@@ -240,13 +308,12 @@
                             }
                         };
 
-                        gridEl.appendChild(dot);
+                        fragment.appendChild(dot);
                     }
                 }
+                gridEl.appendChild(fragment);
                 
-                gridContainer.onmouseleave = () => { isDrawing = false; };
-                window.onmouseup = () => { isDrawing = false; };
-
+                gridEl.onmouseleave = () => { isDrawing = false; };
                 gridContainer.appendChild(gridEl);
                 updateOutput();
             }
@@ -260,18 +327,14 @@
                     for (let x = 0; x < bw; x++) {
                         let code = 0;
                         const dotMap = [
-                            [0, 0, 1],   // Dot 1
-                            [1, 0, 2],   // Dot 2
-                            [2, 0, 4],   // Dot 3
-                            [0, 1, 8],   // Dot 4
-                            [1, 1, 16],  // Dot 5
-                            [2, 1, 32],  // Dot 6
-                            [3, 0, 64],  // Dot 7
-                            [3, 1, 128]  // Dot 8
+                            [0, 0, 1],   [1, 0, 2],   [2, 0, 4],   [0, 1, 8],
+                            [1, 1, 16],  [2, 1, 32],  [3, 0, 64],  [3, 1, 128]
                         ];
 
                         dotMap.forEach(([dy, dx, bit]) => {
-                            if (grid[y * 4 + dy] && grid[y * 4 + dy][x * 2 + dx]) {
+                            const gy = y * 4 + dy;
+                            const gx = x * 2 + dx;
+                            if (grid[gy] && grid[gy][gx]) {
                                 code += bit;
                             }
                         });
@@ -282,9 +345,9 @@
                 brailleOutput.textContent = text;
             }
 
-            widthSlider.oninput = initGrid;
-            heightSlider.oninput = initGrid;
-            clearBtn.onclick = initGrid;
+            widthSlider.oninput = () => initGrid(true);
+            heightSlider.oninput = () => initGrid(true);
+            clearBtn.onclick = () => initGrid(false);
             
             randomBtn.onclick = () => {
                 grid = grid.map(row => row.map(() => Math.random() > 0.8));
@@ -293,16 +356,44 @@
 
             copyBtn.onclick = () => {
                 navigator.clipboard.writeText(brailleOutput.textContent);
-                const originalText = copyBtn.getAttribute('data-en');
+                const originalText = copyBtn.textContent;
                 copyBtn.textContent = 'Copied!';
                 setTimeout(() => {
                     copyBtn.textContent = originalText;
                 }, 1000);
             };
 
+            presetBtns.forEach(btn => {
+                btn.onclick = () => {
+                    const type = btn.dataset.preset;
+                    const pattern = PRESETS[type];
+                    if (!pattern) return;
+
+                    // Set sliders to match preset (8x8 dots = 4x2 chars)
+                    widthSlider.value = 4;
+                    heightSlider.value = 2;
+                    
+                    const w = 4 * BRAILLE_WIDTH;
+                    const h = 2 * BRAILLE_HEIGHT;
+                    grid = Array(h).fill().map(() => Array(w).fill(false));
+                    
+                    for (let y = 0; y < Math.min(h, pattern.length); y++) {
+                        for (let x = 0; x < Math.min(w, pattern[y].length); x++) {
+                            grid[y][x] = pattern[y][x] === 1;
+                        }
+                    }
+                    renderGrid();
+                };
+            });
+
+            window.onmouseup = () => { isDrawing = false; };
+
             initGrid();
         });
     </script>
+    <script src="/i18n.js"></script>
+</body>
+</html>
     <script src="/i18n.js"></script>
 </body>
 </html>
