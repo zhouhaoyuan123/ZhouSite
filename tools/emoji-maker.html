@@ -7,6 +7,28 @@
     <link rel="stylesheet" href="../index_styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .lang-btn {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .lang-btn.active {
+            background: #000;
+            color: #fff;
+        }
+
         .maker-container {
             background: #fff;
             border: 2px solid #000;
@@ -110,6 +132,10 @@
     </style>
 </head>
 <body>
+    <div class="lang-switch">
+        <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">ZH</button>
+    </div>
     <a href="/" class="home-link">🏠</a>
     <div class="container">
         <header class="site-header">
@@ -168,6 +194,8 @@
             const copyBtn = document.getElementById('copyBtn');
 
             let grid = [];
+            let isDrawing = false;
+            let currentMode = true; // true = draw, false = erase
             const BRAILLE_WIDTH = 2;
             const BRAILLE_HEIGHT = 4;
 
@@ -176,6 +204,14 @@
                 const h = parseInt(heightSlider.value) * BRAILLE_HEIGHT;
                 grid = Array(h).fill().map(() => Array(w).fill(false));
                 renderGrid();
+            }
+
+            function handleDotAction(x, y, dot) {
+                if (grid[y][x] !== currentMode) {
+                    grid[y][x] = currentMode;
+                    dot.classList.toggle('active', currentMode);
+                    updateOutput();
+                }
             }
 
             function renderGrid() {
@@ -190,14 +226,27 @@
                     for (let x = 0; x < w; x++) {
                         const dot = document.createElement('div');
                         dot.className = 'dot' + (grid[y][x] ? ' active' : '');
-                        dot.onclick = () => {
-                            grid[y][x] = !grid[y][x];
-                            dot.classList.toggle('active');
-                            updateOutput();
+                        
+                        dot.onmousedown = (e) => {
+                            isDrawing = true;
+                            currentMode = !grid[y][x];
+                            handleDotAction(x, y, dot);
+                            e.preventDefault();
                         };
+
+                        dot.onmouseenter = () => {
+                            if (isDrawing) {
+                                handleDotAction(x, y, dot);
+                            }
+                        };
+
                         gridEl.appendChild(dot);
                     }
                 }
+                
+                gridContainer.onmouseleave = () => { isDrawing = false; };
+                window.onmouseup = () => { isDrawing = false; };
+
                 gridContainer.appendChild(gridEl);
                 updateOutput();
             }

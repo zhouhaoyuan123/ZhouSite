@@ -6,8 +6,34 @@
     <title>Tools - Zhou Site</title>
     <link rel="stylesheet" href="../index_styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .lang-btn.active {
+            background: #000;
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
+    <div class="lang-switch">
+        <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button id="btn-zh" class="lang-btn" onclick="setLang('zh')">ZH</button>
+    </div>
     <a href="/" class="home-link">🏠</a>
     <div class="container">
         <header class="site-header">
