@@ -1,4 +1,99 @@
 <!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Game - Zhou Site</title>
+    <link rel="stylesheet" href="../index_styles.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        body {
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            background: #2e7d32;
+            border: 4px solid #fff;
+            display: block;
+            margin: 10px auto;
+            max-width: 95vw;
+            max-height: 60vh;
+            touch-action: none;
+        }
+
+        .controls-info {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        .mobile-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        @media (max-pointer: coarse) {
+            .mobile-controls {
+                display: flex;
+            }
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 50%; /* Take up half the container width */
+            align-items: center; /* Center items horizontally */
+        }
+
+        /* Ensure buttons remain on separate sides */
+        .control-group:first-child {
+            margin-right: auto; /* Push to the left */
+        }
+
+        .control-group:last-child {
+            margin-left: auto; /* Push to the right */
+        }
+
+        .touch-btn {
+            display: none;
+            width: 60px;
+            height: 60px;
+            border: 2px solid #000;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .touch-btn:active {
+            background: #000;
+            color: #fff;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin: 10px auto;
+            color: #000;
+            text-decoration: none;
+            border: 2px solid #000;
+            padding: 8px 16px;
+            width: fit-content;
+            position: relative; /* Ensure it's positioned relative to the document */
+            z-index: 10; /* Ensure it's above other elements */
+        }
+
+    </style>
+</head>
 <html lang="en">
 
 <head>
@@ -170,11 +265,25 @@
             if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) ball.dy *= -1;
 
             // Paddle collision
-            if (
-                (ball.x - ball.radius < p1.x + p1.width && ball.y > p1.y && ball.y < p1.y + p1.height) ||
-                (ball.x + ball.radius > p2.x && ball.y > p2.y && ball.y < p2.y + p2.height)
-            ) {
-                ball.dx *= -1.1; // Speed up
+            // P1 collision (Left paddle)
+            if (ball.dx < 0 && 
+                ball.x - ball.radius < p1.x + p1.width && 
+                ball.x - ball.radius > p1.x &&
+                ball.y > p1.y && 
+                ball.y < p1.y + p1.height) {
+                ball.dx *= -1.1;
+                ball.x = p1.x + p1.width + ball.radius; // Resolve overlap
+                ball.dx = Math.min(Math.max(ball.dx, -10), 10);
+            }
+            // P2 collision (Right paddle)
+            if (ball.dx > 0 && 
+                ball.x + ball.radius > p2.x && 
+                ball.x + ball.radius < p2.x + p2.width &&
+                ball.y > p2.y && 
+                ball.y < p2.y + p2.height) {
+                ball.dx *= -1.1;
+                ball.x = p2.x - ball.radius; // Resolve overlap
+                ball.dx = Math.min(Math.max(ball.dx, -10), 10);
             }
 
             // Scoring
@@ -227,19 +336,8 @@
         }
 
         loop();
-
-        // Simple i18n
-        function getPreferredLanguage() {
-            var language = navigator.language.substring(0,2) || navigator.languages[0].substring(0,2) || "en";
-            return language.split(",")[0];
-        }
-
-        const lang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
-        document.documentElement.lang = lang;
-        document.querySelectorAll('[data-' + lang + ']').forEach(el => {
-            el.textContent = el.getAttribute('data-' + lang);
-        });
     </script>
+    <script src="/i18n.js"></script>
 </body>
 
 </html>

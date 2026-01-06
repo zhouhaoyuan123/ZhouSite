@@ -22,4 +22,9 @@ for item in *; do
   if [ "$exclude_flag" = false ]; then
     cp -r "$item" dist/
   fi
+
+# Add robots.txt (allow all)
+echo "User-agent: * 
+Allow: /" > dist/robots.txt
+
 done
