@@ -3,12 +3,12 @@ modules = ["web", "python-3.11"]
 
 [nix]
 channel = "stable-24_11"
-packages = ["static-web-server"]
+packages = ["static-web-server", "jq"]
 
 [deployment]
 publicDir = "dist"
 deploymentTarget = "static"
-build = ["sh", "-c", "sh build.sh"]
+build = ["sh", "-c", "./build.sh && ./build_search.sh ./dist ./dist/search-index.json"]
 
 [workflows]
 runButton = "Serve static"

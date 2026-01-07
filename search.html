@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search | Static Website Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2d3748;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1em;
+        }
+
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #searchInput:focus {
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        #searchButton {
+            padding: 12px 24px;
+            background: #4299e1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #searchButton:hover {
+            background: #3182ce;
+        }
+
+        .search-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background: #f8fafc;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .results-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .result-item {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .result-item:hover {
+            border-left-color: #4299e1;
+            background: #edf2f7;
+        }
+
+        .result-title {
+            color: #2d3748;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .result-url {
+            color: #4a5568;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            word-break: break-all;
+        }
+
+        .result-description {
+            color: #4a5568;
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+
+        .highlight {
+            background-color: #fffacd;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .no-results h3 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #4299e1;
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            color: #718096;
+            font-size: 0.85em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            #searchButton {
+                width: 100%;
+            }
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Website Search</h1>
+            <p class="subtitle">Search through all pages of this website</p>
+        </header>
+
+        <div class="search-container">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Enter search terms..." 
+                    autocomplete="off"
+                >
+                <button id="searchButton">Search</button>
+            </div>
+
+            <div class="search-info">
+                <div id="resultCount">Enter search term to begin</div>
+                <div id="searchTime"></div>
+            </div>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="no-results" id="noResults">
+                <h3>🔍 Search for content</h3>
+                <p>Type keywords in the search box above to find pages on this website.</p>
+            </div>
+        </div>
+
+        <footer>
+            <p>Static Website Search • Search powered by local index</p>
+        </footer>
+    </div>
+
+    <script>
+        class StaticSearch {
+            constructor() {
+                this.searchIndex = [];
+                this.currentResults = [];
+                this.initialize();
+            }
+
+            async initialize() {
+                await this.loadIndex();
+                this.setupEventListeners();
+                this.updateDisplay();
+            }
+
+            async loadIndex() {
+                try {
+                    const response = await fetch('search-index.json');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    this.searchIndex = await response.json();
+                    console.log(`Loaded ${this.searchIndex.length} pages`);
+                } catch (error) {
+                    console.error('Error loading search index:', error);
+                    this.showError('Failed to load search index. Please check if search-index.json exists in the same directory.');
+                }
+            }
+
+            setupEventListeners() {
+                const searchInput = document.getElementById('searchInput');
+                const searchButton = document.getElementById('searchButton');
+
+                // Search on button click
+                searchButton.addEventListener('click', () => this.performSearch());
+
+                // Search on Enter key
+                searchInput.addEventListener('keyup', (event) => {
+                    if (event.key === 'Enter') {
+                        this.performSearch();
+                    }
+                });
+
+                // Search as you type (with debounce)
+                let debounceTimer;
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        this.performSearch();
+                    }, 300);
+                });
+            }
+
+            performSearch() {
+                const query = document.getElementById('searchInput').value.trim();
+
+                if (!query) {
+                    this.currentResults = [];
+                    this.updateDisplay();
+                    return;
+                }
+
+                const startTime = performance.now();
+                this.currentResults = this.search(query);
+                const endTime = performance.now();
+
+                this.updateDisplay();
+                this.updateStats(query, this.currentResults.length, endTime - startTime);
+            }
+
+            search(query) {
+                if (!query || query.length < 2) {
+                    return [];
+                }
+
+                const terms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+                if (terms.length === 0) {
+                    return [];
+                }
+
+                return this.searchIndex
+                    .map(page => {
+                        const score = this.calculateRelevance(page, terms);
+                        return { ...page, score };
+                    })
+                    .filter(page => page.score > 0)
+                    .sort((a, b) => b.score - a.score);
+            }
+
+            calculateRelevance(page, terms) {
+                let score = 0;
+
+                terms.forEach(term => {
+                    // Search in title (highest weight)
+                    if (page.title.toLowerCase().includes(term)) {
+                        score += 5;
+                    }
+
+                    // Search in description
+                    if (page.description.toLowerCase().includes(term)) {
+                        score += 3;
+                    }
+
+                    // Search in URL
+                    if (page.url.toLowerCase().includes(term)) {
+                        score += 4;
+                    }
+
+                    // Search in filename
+                    if (page.filename && page.filename.toLowerCase().includes(term)) {
+                        score += 2;
+                    }
+                });
+
+                return score;
+            }
+
+            updateDisplay() {
+                const container = document.getElementById('resultsContainer');
+                const noResults = document.getElementById('noResults');
+
+                if (this.currentResults.length === 0) {
+                    const query = document.getElementById('searchInput').value.trim();
+
+                    if (query && query.length >= 2) {
+                        noResults.innerHTML = `
+                            <h3>😔 No results found</h3>
+                            <p>No pages found for "<strong>${this.escapeHtml(query)}</strong>"</p>
+                            <p>Try different keywords or check your spelling.</p>
+                        `;
+                    } else if (query && query.length < 2) {
+                        noResults.innerHTML = `
+                            <h3>🔍 More characters needed</h3>
+                            <p>Please enter at least 2 characters to search.</p>
+                        `;
+                    } else {
+                        noResults.innerHTML = `
+                            <h3>🔍 Search for content</h3>
+                            <p>Type keywords in the search box above to find pages on this website.</p>
+                        `;
+                    }
+                    noResults.style.display = 'block';
+                    return;
+                }
+
+                noResults.style.display = 'none';
+
+                const resultsHTML = this.currentResults
+                    .map(result => this.createResultHTML(result))
+                    .join('');
+
+                container.innerHTML = resultsHTML;
+
+                // Add click handlers to result items
+                document.querySelectorAll('.result-item').forEach((item, index) => {
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('click', () => {
+                        window.location.href = this.currentResults[index].url;
+                    });
+                });
+            }
+
+            createResultHTML(result) {
+                const query = document.getElementById('searchInput').value.trim();
+                const terms = query.toLowerCase().split(/\s+/);
+
+                // Highlight matching terms
+                const highlightedTitle = this.highlightText(result.title, terms);
+                const highlightedDesc = this.highlightText(result.description, terms);
+                const highlightedUrl = this.highlightText(result.url, terms);
+
+                return `
+                    <div class="result-item">
+                        <div class="result-title">${highlightedTitle}</div>
+                        <div class="result-url">${highlightedUrl}</div>
+                        <div class="result-description">${highlightedDesc}</div>
+                    </div>
+                `;
+            }
+
+            highlightText(text, terms) {
+                let highlighted = this.escapeHtml(text);
+
+                terms.forEach(term => {
+                    if (term.length < 2) return;
+                    const regex = new RegExp(`(${this.escapeRegExp(term)})`, 'gi');
+                    highlighted = highlighted.replace(regex, '<span class="highlight">$1</span>');
+                });
+
+                return highlighted;
+            }
+
+            updateStats(query, resultCount, searchTime) {
+                document.getElementById('resultCount').textContent = 
+                    query ? `${resultCount} result${resultCount !== 1 ? 's' : ''} found` : 'Enter search term to begin';
+
+                document.getElementById('searchTime').textContent = 
+                    query ? `Search took ${searchTime.toFixed(0)}ms` : '';
+            }
+
+            showError(message) {
+                const container = document.getElementById('resultsContainer');
+                container.innerHTML = `
+                    <div class="no-results" style="color: #e53e3e;">
+                        <h3>⚠️ Error</h3>
+                        <p>${this.escapeHtml(message)}</p>
+                        <p>Make sure search-index.json exists in the same directory.</p>
+                    </div>
+                `;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+        }
+
+        // Initialize search when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.staticSearch = new StaticSearch();
+        });
+    </script>
+</body>
+</html>
