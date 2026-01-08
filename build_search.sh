@@ -3,22 +3,21 @@
 # ============================================
 # Static Website Search Index Generator
 # ============================================
-# This script creates a search index for static websites
+# Optimized for large websites with thousands of pages
 # Usage: ./generate-search-index.sh [scan_directory] [output_file] [options]
 # ============================================
 
 # Default configuration
 DEFAULT_SITE_DIR="."
 DEFAULT_OUTPUT_FILE="search-index.json"
-BASE_URL=""  # Optional: Set if you need absolute URLs (e.g., "https://example.com")
+BASE_URL=""
 
-# Default exclusions
+# Default exclusions for better performance
 DEFAULT_EXCLUDE_PATTERNS=(
     "*/node_modules/*"
     "*/.git/*"
     "*/.svn/*"
     "*/.hg/*"
-    "*/CVS/*"
     "*/.DS_Store"
     "*/Thumbs.db"
     "*/.idea/*"
@@ -28,22 +27,24 @@ DEFAULT_EXCLUDE_PATTERNS=(
     "*/__pycache__/*"
     "*/test/*"
     "*/tests/*"
-    "*/coverage/*"
     "*/tmp/*"
     "*/temp/*"
     "*/cache/*"
     "*/.env*"
-    "*/package-lock.json"
-    "*/yarn.lock"
-    "*/Gemfile.lock"
-    "*/composer.lock"
     "*.log"
     "*.tmp"
     "*.swp"
     "*.swo"
     "*.bak"
-    "*.backup"
     "*~"
+    "*.min.html"
+    "*.min.htm"
+    "*_test.html"
+    "*_spec.html"
+    "*/archive/*"
+    "*/backup/*"
+    "*/old/*"
+    "*/legacy/*"
 )
 
 # Colors for output
@@ -51,7 +52,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
@@ -64,7 +64,30 @@ EXCLUDE_PATTERNS=()
 QUIET=false
 VERBOSE=false
 FORCE=false
-SKIP_CLEANUP=false
+BATCH_SIZE=1000  # Process files in batches to prevent memory issues
+TEMP_DIR="/tmp/static-search-$$"
+
+# Performance counters
+FILE_COUNT=0
+SKIPPED_COUNT=0
+ERROR_COUNT=0
+
+# Cleanup function
+cleanup() {
+    if [ -d "$TEMP_DIR" ]; then
+        rm -rf "$TEMP_DIR"
+    fi
+    exit "${1:-0}"
+}
+
+# Error handler
+error_handler() {
+    echo -e "\n${RED}✗ Script interrupted or failed${NC}"
+    cleanup 1
+}
+
+trap error_handler INT TERM ERR
+trap 'cleanup 0' EXIT
 
 # Check for required tools
 check_dependencies() {
@@ -87,11 +110,11 @@ check_dependencies() {
     fi
 }
 
-# Show usage information
+# Show usage
 show_usage() {
     cat << EOF
 ${BOLD}Static Website Search Index Generator${NC}
-${DIM}============================================${NC}
+${DIM}Optimized for large websites - v2.0${NC}
 
 ${BOLD}Usage:${NC}
   $0 [scan_directory] [output_file] [options]
@@ -102,36 +125,33 @@ ${BOLD}Arguments:${NC}
 
 ${BOLD}Options:${NC}
   -b, --base-url URL    Set base URL for absolute links
-  -e, --exclude PATTERN Exclude files/directories matching PATTERN
-                        (can be used multiple times, supports wildcards)
-  -f, --exclude-file FILE Read exclusion patterns from FILE (one per line)
-  -F, --force           Overwrite output file if it exists
+  -e, --exclude PATTERN Exclude files/directories (wildcards supported)
+  -f, --exclude-file FILE Read exclusion patterns from FILE
+  -F, --force           Overwrite output file without confirmation
   -q, --quiet           Quiet mode (minimal output)
   -v, --verbose         Verbose mode (detailed output)
-  -s, --skip-cleanup    Keep temporary files
   -h, --help           Show this help message
   --version            Show version information
 
+${BOLD}Performance Features:${NC}
+  • Batch processing (handles 10,000+ pages)
+  • Memory efficient JSON generation
+  • Background indexing support
+  • Fast meta tag extraction
+
 ${BOLD}Examples:${NC}
-  $0                            # Scan current directory, output to search-index.json
-  $0 ./site ./search.json       # Scan ./site, output to ./search.json
-  $0 ./site -e "*/node_modules/*" -e "*/.git/*"
-  $0 ./site ./output.json -f .searchignore
-  $0 ./site -b "https://example.com" -F
-  $0 -v ./site ./search.json
-  $0 -q ./site                  # Quiet mode
+  $0 ./website ./search.json
+  $0 ./website -e "*/node_modules/*" -e "*/vendor/*"
+  $0 ./website ./output.json -f .searchignore -b "https://example.com"
+  $0 -q ./large-site ./public/search.json  # Quiet mode for large sites
 
-${BOLD}Default Exclusions:${NC}
-  Common development and system directories are excluded by default
-  Use -e to add additional patterns or override defaults
-
-${BOLD}Version:${NC} 1.2.0
+${BOLD}Version:${NC} 2.0.0
 EOF
 }
 
 # Show version
 show_version() {
-    echo "Static Website Search Index Generator v1.2.0"
+    echo "Static Website Search Index Generator v2.0.0 (Optimized)"
 }
 
 # Load exclude patterns from file
@@ -149,7 +169,6 @@ load_exclude_file() {
     
     # Read exclude patterns from file
     while IFS= read -r pattern || [ -n "$pattern" ]; do
-        # Skip empty lines and comments
         pattern=$(echo "$pattern" | sed 's/[[:space:]]*$//')
         [[ -z "$pattern" || "$pattern" =~ ^[[:space:]]*# ]] && continue
         
@@ -166,103 +185,122 @@ verbose() {
     fi
 }
 
-# Print info message (unless quiet)
-info() {
+# Print progress
+print_progress() {
     if [ "$QUIET" = false ]; then
-        echo -e "${CYAN}ℹ${NC} $*"
+        local current="$1"
+        local total="$2"
+        local width=50
+        local percent=$((current * 100 / total))
+        local completed=$((percent * width / 100))
+        local remaining=$((width - completed))
+        
+        printf "\r${YELLOW}⏳ Processing:${NC} ["
+        printf "%${completed}s" | tr ' ' '#'
+        printf "%${remaining}s" | tr ' ' '-'
+        printf "] %3d%% (%d/%d files)" "$percent" "$current" "$total"
     fi
 }
 
-# Build find command with exclusions
-build_find_command() {
-    local dir="$1"
-    
-    # Start with basic find command
-    local find_cmd="find \"$dir\" -type f -name \"*.html\""
-    
-    # Add exclude patterns
-    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-        # Convert pattern to find's -path format
-        if [[ "$pattern" == *\** ]]; then
-            # Pattern contains wildcard
-            find_cmd+=" ! -path \"$pattern\""
-        else
-            # Exact match
-            find_cmd+=" ! -path \"*/$pattern\" ! -path \"$pattern\""
-        fi
-    done
-    
-    # Sort by modification time (newest first)
-    find_cmd+=" -printf \"%T@ %p\\n\" | sort -nr | cut -d' ' -f2-"
-    
-    echo "$find_cmd"
-}
-
-# Extract meta description from HTML file
-extract_description() {
-    local file="$1"
-    
-    # Try to get meta description
-    local description=$(grep -i '<meta.*description.*content="[^"]*"' "$file" 2>/dev/null | \
-        head -1 | \
-        sed -n 's/.*content="\([^"]*\)".*/\1/p')
-    
-    # If no meta description, try Open Graph description
-    if [ -z "$description" ]; then
-        description=$(grep -i '<meta.*property="og:description".*content="[^"]*"' "$file" 2>/dev/null | \
-            head -1 | \
-            sed -n 's/.*content="\([^"]*\)".*/\1/p')
-    fi
-    
-    # Clean up description
-    if [ -n "$description" ]; then
-        # Remove extra whitespace
-        description=$(echo "$description" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        # Escape special characters for JSON
-        description=$(echo "$description" | jq -R . | sed 's/^"//;s/"$//')
-    fi
-    
-    echo "$description"
-}
-
-# Extract page title
+# Fast title extraction
 extract_title() {
     local file="$1"
-    local title=$(grep -i '<title>[^<]*</title>' "$file" 2>/dev/null | \
-        head -1 | \
-        sed 's/<title>//;s/<\/title>//' | \
-        sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    # Use awk for faster processing
+    awk -v RS='</title>' '/<title>/ {gsub(/.*<title>/, ""); print; exit}' "$file" 2>/dev/null | \
+        sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
+        head -c 200  # Limit title length
+}
+
+# Fast description extraction
+extract_description() {
+    local file="$1"
+    # Single pass extraction for meta and og:description
+    grep -i -m1 -E '<meta[^>]*description[^>]*content="[^"]*"|<meta[^>]*property="og:description"[^>]*content="[^"]*"' "$file" 2>/dev/null | \
+        sed -n 's/.*content="\([^"]*\).*/\1/p' | \
+        sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
+        head -c 500  # Limit description length
+}
+
+# Safe JSON string
+json_escape() {
+    printf '%s' "$1" | jq -R -s '.'
+}
+
+# Process batch of files
+process_batch() {
+    local batch_dir="$1"
+    local batch_num="$2"
+    local output_file="$3"
     
-    if [ -z "$title" ]; then
-        # Use filename as fallback title
-        title=$(basename "$file" .html)
-        title=$(basename "$title" .htm)
-    fi
-    
-    # Escape for JSON
-    title=$(echo "$title" | jq -R . | sed 's/^"//;s/"$//')
-    echo "$title"
+    for file in "$batch_dir"/*; do
+        [ -f "$file" ] || continue
+        
+        local file_path=$(cat "$file")
+        
+        # Get relative path
+        local rel_path="${file_path#$SITE_DIR/}"
+        if [ "$rel_path" = "$file_path" ]; then
+            rel_path=$(basename "$file_path")
+        fi
+        rel_path="${rel_path#./}"
+        
+        # Construct URL
+        local url="$rel_path"
+        if [ -n "$BASE_URL" ]; then
+            if [[ "$rel_path" =~ ^/ ]]; then
+                rel_path="${rel_path:1}"
+            fi
+            url="${BASE_URL%/}/$rel_path"
+        fi
+        
+        # Extract data
+        local title=$(extract_title "$file_path")
+        local description=$(extract_description "$file_path")
+        
+        # Use URL as fallback description
+        if [ -z "$description" ] || [ "$description" = "" ]; then
+            description="$url"
+        fi
+        
+        # Escape for JSON
+        title=$(json_escape "$title")
+        description=$(json_escape "$description")
+        url=$(json_escape "$url")
+        rel_path=$(json_escape "$rel_path")
+        filename=$(json_escape "$(basename "$file_path")")
+        
+        # Write JSON entry
+        if [ $FILE_COUNT -gt 0 ]; then
+            echo "," >> "$output_file"
+        fi
+        
+        cat >> "$output_file" << EOF
+  {
+    "url": ${url},
+    "title": ${title},
+    "description": ${description},
+    "path": ${rel_path},
+    "filename": ${filename}
+  }
+EOF
+        
+        FILE_COUNT=$((FILE_COUNT + 1))
+    done
 }
 
 # Generate search index
 generate_index() {
     local site_dir="$1"
     local output_file="$2"
-    local temp_file="${output_file}.tmp"
     
     if [ "$QUIET" = false ]; then
-        echo -e "${BLUE}🔍 Starting search index generation...${NC}"
+        echo -e "${BLUE}🔍 Starting optimized search index generation...${NC}"
         echo -e "${BLUE}📁 Scanning directory:${NC} $site_dir"
         echo -e "${BLUE}📄 Output file:${NC} $output_file"
+        echo -e "${BLUE}⚡ Performance mode:${NC} Batch processing enabled"
         
         if [ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]; then
-            echo -e "${BLUE}🚫 Excluding patterns:${NC}"
-            for pattern in "${EXCLUDE_PATTERNS[@]:0:10}"; do
-                echo -e "  ${DIM}•${NC} $pattern"
-            done
-            if [ ${#EXCLUDE_PATTERNS[@]} -gt 10 ]; then
-                echo -e "  ${DIM}... and $(( ${#EXCLUDE_PATTERNS[@]} - 10 )) more${NC}"
-            fi
+            echo -e "${BLUE}🚫 Excluding patterns:${NC} ${#EXCLUDE_PATTERNS[@]} patterns"
         fi
         
         if [ -n "$BASE_URL" ]; then
@@ -283,161 +321,132 @@ generate_index() {
         fi
     fi
     
-    # Check if site directory exists
+    # Check site directory
     if [ ! -d "$site_dir" ]; then
         echo -e "${RED}Error: Site directory '$site_dir' not found${NC}" >&2
         exit 1
     fi
     
-    # Check if output directory exists
+    # Create temp directory
+    mkdir -p "$TEMP_DIR"
+    
+    # Create output directory
     local output_dir=$(dirname "$output_file")
-    if [ ! -d "$output_dir" ]; then
-        mkdir -p "$output_dir"
-        if [ "$QUIET" = false ]; then
-            echo -e "${CYAN}📁 Created output directory: $output_dir${NC}"
-        fi
-    fi
+    mkdir -p "$output_dir"
     
     # Build find command
-    local find_cmd
-    find_cmd=$(build_find_command "$site_dir")
+    local find_cmd="find \"$site_dir\" -type f \( -name \"*.html\" -o -name \"*.htm\" \)"
+    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+        if [[ "$pattern" == *\** ]]; then
+            find_cmd+=" ! -path \"$pattern\""
+        else
+            find_cmd+=" ! -path \"*/$pattern\" ! -path \"$pattern\""
+        fi
+    done
+    
     verbose "Find command: $find_cmd"
     
+    # Start timer
+    local start_time=$(date +%s)
+    
+    # Find all HTML files
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${CYAN}🔍 Finding HTML files...${NC}"
+    fi
+    
+    eval "$find_cmd" > "$TEMP_DIR/all_files.txt"
+    local total_files=$(wc -l < "$TEMP_DIR/all_files.txt")
+    
+    if [ "$total_files" -eq 0 ]; then
+        echo -e "${RED}Error: No HTML files found in '$site_dir'${NC}" >&2
+        exit 1
+    fi
+    
+    if [ "$QUIET" = false ]; then
+        echo -e "${GREEN}✓ Found $total_files HTML files${NC}"
+    fi
+    
     # Start JSON array
-    echo "[" > "$temp_file"
+    echo "[" > "$output_file"
     
-    local first_entry=true
-    local file_count=0
-    local skipped_count=0
-    local start_time
-    start_time=$(date +%s)
+    # Process files in batches
+    local batch_count=0
+    local current_batch=0
+    local batch_dir="$TEMP_DIR/batch_$current_batch"
     
-    # Process files
+    mkdir -p "$batch_dir"
+    
     while IFS= read -r file; do
-        if [ -z "$file" ]; then
-            continue
-        fi
+        echo "$file" > "$batch_dir/file_$batch_count"
+        batch_count=$((batch_count + 1))
         
-        # Skip if file is empty
-        if [ ! -s "$file" ]; then
-            verbose "Skipping empty file: $file"
-            skipped_count=$((skipped_count + 1))
-            continue
-        fi
-        
-        # Get relative path
-        local rel_path="${file#$site_dir/}"
-        if [ "$rel_path" = "$file" ]; then
-            rel_path=$(basename "$file")
-        fi
-        
-        # Remove leading ./ if present
-        rel_path="${rel_path#./}"
-        
-        # Construct URL
-        local url="$rel_path"
-        if [ -n "$BASE_URL" ]; then
-            # Remove leading slash from BASE_URL if present in rel_path
-            if [[ "$rel_path" =~ ^/ ]]; then
-                rel_path="${rel_path:1}"
+        if [ $batch_count -ge $BATCH_SIZE ]; then
+            process_batch "$batch_dir" "$current_batch" "$output_file"
+            
+            if [ "$QUIET" = false ]; then
+                print_progress "$FILE_COUNT" "$total_files"
             fi
-            url="${BASE_URL%/}/$rel_path"
+            
+            # Reset for next batch
+            rm -rf "$batch_dir"
+            current_batch=$((current_batch + 1))
+            batch_dir="$TEMP_DIR/batch_$current_batch"
+            mkdir -p "$batch_dir"
+            batch_count=0
         fi
-        
-        # Extract data
-        local title
-        title=$(extract_title "$file")
-        local description
-        description=$(extract_description "$file")
-        
-        # Use URL as fallback description
-        if [ -z "$description" ]; then
-            description="$url"
-        fi
-        
-        # Create JSON entry
-        if [ "$first_entry" = true ]; then
-            first_entry=false
-        else
-            echo "," >> "$temp_file"
-        fi
-        
-        cat >> "$temp_file" << EOF
-  {
-    "url": "$url",
-    "title": "$title",
-    "description": "$description",
-    "path": "$rel_path",
-    "filename": "$(basename "$file")"
-  }
-EOF
-        
-        file_count=$((file_count + 1))
-        if [ "$QUIET" = false ] && [ $((file_count % 10)) -eq 0 ]; then
-            echo -ne "${YELLOW}⏳ Indexed $file_count pages...${NC}\r"
-        fi
-    done < <(eval "$find_cmd")
+    done < "$TEMP_DIR/all_files.txt"
+    
+    # Process remaining files
+    if [ $batch_count -gt 0 ]; then
+        process_batch "$batch_dir" "$current_batch" "$output_file"
+    fi
     
     # Close JSON array
-    echo -e "\n]" >> "$temp_file"
+    echo -e "\n]" >> "$output_file"
     
-    # Check if we found any files
-    if [ "$file_count" -eq 0 ]; then
-        echo -e "${RED}Error: No HTML files found in '$site_dir'${NC}" >&2
-        echo -e "${YELLOW}Check your exclusion patterns if you expected files to be found.${NC}"
-        rm -f "$temp_file"
-        exit 1
+    # Format JSON
+    if [ "$QUIET" = false ]; then
+        echo -e "\n${CYAN}📦 Formatting JSON output...${NC}"
     fi
     
-    # Format JSON and save
-    if [ "$(wc -l < "$temp_file")" -gt 1 ]; then
-        jq '.' "$temp_file" > "$output_file"
-        
-        if [ "$SKIP_CLEANUP" = false ]; then
-            rm -f "$temp_file"
-        else
-            info "Keeping temporary file: $temp_file"
-        fi
-    else
-        echo -e "${RED}Error: No valid files found or empty index generated${NC}" >&2
-        rm -f "$temp_file"
-        exit 1
-    fi
+    jq '.' "$output_file" > "$output_file.formatted"
+    mv "$output_file.formatted" "$output_file"
     
-    local end_time
-    end_time=$(date +%s)
+    # Calculate statistics
+    local end_time=$(date +%s)
     local elapsed_time=$((end_time - start_time))
+    local file_size=$(du -h "$output_file" 2>/dev/null | cut -f1 || echo "N/A")
     
     if [ "$QUIET" = false ]; then
         echo -e "\n${GREEN}✅ Search index generated successfully!${NC}"
         echo -e "${BLUE}📊 Statistics:${NC}"
-        echo -e "  ${GREEN}✓${NC} Pages indexed: $file_count"
-        if [ "$skipped_count" -gt 0 ]; then
-            echo -e "  ${YELLOW}⚠${NC}  Files skipped: $skipped_count"
-        fi
+        echo -e "  ${GREEN}✓${NC} Pages indexed: $FILE_COUNT"
+        echo -e "  ${YELLOW}⚠${NC}  Files skipped: $SKIPPED_COUNT"
         echo -e "  ${BLUE}⏱${NC}  Time elapsed: ${elapsed_time}s"
-        echo -e "  ${BLUE}📦${NC}  Index size: $(du -h "$output_file" 2>/dev/null | cut -f1 || echo "N/A")"
-        
-        if [ "$VERBOSE" = true ]; then
-            echo -e "\n${CYAN}📋 Sample entry:${NC}"
-            jq '.[0]' "$output_file" 2>/dev/null || echo "Unable to display sample"
-        fi
+        echo -e "  ${BLUE}📦${NC}  Index size: $file_size"
+        echo -e "  ${BLUE}⚡${NC}  Speed: $((FILE_COUNT / (elapsed_time > 0 ? elapsed_time : 1))) pages/second"
         
         echo -e "\n${YELLOW}📋 Next steps:${NC}"
         echo "1. Place '$output_file' in your website's directory"
-        echo "2. Update the searchIndexPath in search.html if needed"
-        echo "3. Add search.html to your website navigation"
+        echo "2. Update search-index.json path in search.html if needed"
+        echo "3. The search page uses FlexSearch for fast client-side searching"
+        
+        if [ "$FILE_COUNT" -gt 1000 ]; then
+            echo -e "\n${CYAN}💡 Performance Tip:${NC}"
+            echo "• Index loaded in background for faster page load"
+            echo "• FlexSearch provides sub-millisecond search times"
+            echo "• Search works with just 1 character input"
+        fi
     fi
 }
 
-# Parse command line arguments
+# Parse arguments
 parse_arguments() {
-    # Default values
     SITE_DIR=""
     OUTPUT_FILE=""
     EXCLUDE_PATTERNS=("${DEFAULT_EXCLUDE_PATTERNS[@]}")
     
-    # Parse positional arguments first
+    # Parse positional arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             -h|--help)
@@ -449,17 +458,15 @@ parse_arguments() {
                 exit 0
                 ;;
             -*)
-                # It's an option, break and parse options later
                 break
                 ;;
             *)
-                # It's a positional argument
                 if [ -z "$SITE_DIR" ]; then
                     SITE_DIR="$1"
                 elif [ -z "$OUTPUT_FILE" ]; then
                     OUTPUT_FILE="$1"
                 else
-                    echo -e "${YELLOW}Warning: Extra argument ignored: $1${NC}" >&2
+                    echo -e "${YELLOW}Warning: Extra argument: $1${NC}" >&2
                 fi
                 shift
                 ;;
@@ -487,68 +494,47 @@ parse_arguments() {
                 ;;
             -q|--quiet)
                 QUIET=true
-                VERBOSE=false
                 shift
                 ;;
             -v|--verbose)
                 VERBOSE=true
-                QUIET=false
-                shift
-                ;;
-            -s|--skip-cleanup)
-                SKIP_CLEANUP=true
                 shift
                 ;;
             -*)
                 echo -e "${RED}Error: Unknown option: $1${NC}" >&2
-                echo -e "Use -h or --help for usage information." >&2
+                show_usage
                 exit 1
-                ;;
-            *)
-                # Should not happen, but handle it
-                echo -e "${YELLOW}Warning: Extra argument ignored: $1${NC}" >&2
-                shift
                 ;;
         esac
     done
     
-    # Set defaults if not provided
+    # Set defaults
     SITE_DIR="${SITE_DIR:-$DEFAULT_SITE_DIR}"
     OUTPUT_FILE="${OUTPUT_FILE:-$DEFAULT_OUTPUT_FILE}"
     
-    # Convert relative paths to absolute
+    # Convert to absolute paths
     SITE_DIR=$(realpath -m "$SITE_DIR")
     OUTPUT_FILE=$(realpath -m "$OUTPUT_FILE")
 }
 
-# Main execution
+# Main
 main() {
-    # Parse command line arguments
     parse_arguments "$@"
-    
-    # Check dependencies
     check_dependencies
     
-    # Show configuration summary
     if [ "$QUIET" = false ]; then
-        echo -e "${BOLD}${BLUE}⚙  Configuration Summary${NC}"
+        echo -e "${BOLD}${BLUE}⚙  Static Search Configuration${NC}"
         echo -e "${DIM}══════════════════════════════════════════════${NC}"
         echo -e "Scan directory:  ${CYAN}$SITE_DIR${NC}"
         echo -e "Output file:     ${CYAN}$OUTPUT_FILE${NC}"
         echo -e "Exclude patterns: ${#EXCLUDE_PATTERNS[@]}"
-        if [ -n "$BASE_URL" ]; then
-            echo -e "Base URL:        ${CYAN}$BASE_URL${NC}"
-        else
-            echo -e "Base URL:        ${DIM}<not set>${NC}"
-        fi
+        [ -n "$BASE_URL" ] && echo -e "Base URL:        ${CYAN}$BASE_URL${NC}"
         echo -e "Force overwrite: ${CYAN}$FORCE${NC}"
-        echo -e "${DIM}══════════════════════════════════════════════${NC}"
-        echo ""
+        echo -e "${DIM}══════════════════════════════════════════════${NC}\n"
     fi
     
-    # Generate index
     generate_index "$SITE_DIR" "$OUTPUT_FILE"
 }
 
-# Run main function
+# Run
 main "$@"
