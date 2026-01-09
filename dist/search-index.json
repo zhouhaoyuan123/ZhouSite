@@ -14,13 +14,6 @@
     "filename": "index.html"
   },
   {
-    "url": "playground/index.html",
-    "title": "Zhou Site - Playground",
-    "description": "Zhou Site Playground - Explore interactive web games and experiments.",
-    "path": "playground/index.html",
-    "filename": "index.html"
-  },
-  {
     "url": "playground/football.html",
     "title": "Football Game - Zhou Site",
     "description": "2-Player Football Game - A fun, interactive sports game on Zhou Site.",
@@ -28,9 +21,16 @@
     "filename": "football.html"
   },
   {
+    "url": "playground/index.html",
+    "title": "Zhou Site - Playground",
+    "description": "Zhou Site Playground - Explore interactive web games and experiments.",
+    "path": "playground/index.html",
+    "filename": "index.html"
+  },
+  {
     "url": "search.html",
-    "title": "Search | Static Website Search",
-    "description": "search.html",
+    "title": "Search - Zhou Site",
+    "description": "Search Zhou Site - Find games, tools, and content across the site.",
     "path": "search.html",
     "filename": "search.html"
   },
@@ -43,7 +43,7 @@
   },
   {
     "url": "tools/emoji-maker.html",
-    "title": "",
+    "title": "Emoji Maker - Zhou Site",
     "description": "Emoji Maker - Create custom braille-based emojis and art on Zhou Site.",
     "path": "tools/emoji-maker.html",
     "filename": "emoji-maker.html"
