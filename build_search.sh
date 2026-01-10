@@ -3,7 +3,7 @@
 # ============================================
 # Static Website Search Index Generator
 # ============================================
-# Uses htmlq for reliable HTML parsing
+# Outputs minified JSON for better performance
 # Usage: ./generate-search-index.sh [scan_directory] [output_file] [options]
 # ============================================
 
@@ -67,8 +67,6 @@ VERBOSE=false
 FORCE=false
 BATCH_SIZE=1000
 TEMP_DIR="/tmp/static-search-$$"
-USE_HTMLQ=false
-USE_PUP=false
 
 # Performance counters
 FILE_COUNT=0
@@ -111,33 +109,13 @@ check_dependencies() {
         echo -e "\nInstall missing dependencies and try again."
         exit 1
     fi
-    
-    # Check for HTML parsers
-    if command -v htmlq &> /dev/null; then
-        USE_HTMLQ=true
-        if [ "$VERBOSE" = true ]; then
-            echo -e "${GREEN}✓ Found htmlq for HTML parsing${NC}"
-        fi
-    elif command -v pup &> /dev/null; then
-        USE_PUP=true
-        if [ "$VERBOSE" = true ]; then
-            echo -e "${GREEN}✓ Found pup for HTML parsing${NC}"
-        fi
-    else
-        echo -e "${YELLOW}⚠  htmlq or pup not found. Using basic regex parsing.${NC}"
-        echo -e "${DIM}For better HTML parsing, install one of:${NC}"
-        echo -e "  ${CYAN}• htmlq:${NC} cargo install htmlq"
-        echo -e "  ${CYAN}• pup:${NC} brew install pup  # macOS"
-        echo -e "  ${CYAN}• pup:${NC} sudo apt install pup  # Ubuntu/Debian"
-        echo ""
-    fi
 }
 
 # Show usage
 show_usage() {
     cat << EOF
 ${BOLD}Static Website Search Index Generator${NC}
-${DIM}Uses htmlq for reliable HTML parsing - v3.0${NC}
+${DIM}Outputs minified JSON for better performance${NC}
 
 ${BOLD}Usage:${NC}
   $0 [scan_directory] [output_file] [options]
@@ -153,26 +131,23 @@ ${BOLD}Options:${NC}
   -F, --force           Overwrite output file without confirmation
   -q, --quiet           Quiet mode (minimal output)
   -v, --verbose         Verbose mode (detailed output)
+  -p, --pretty          Output pretty-printed JSON (default: minified)
   -h, --help           Show this help message
   --version            Show version information
-
-${BOLD}HTML Parsing:${NC}
-  Uses htmlq (if available) for reliable HTML parsing
-  Falls back to regex if htmlq not available
-  Install: cargo install htmlq
 
 ${BOLD}Examples:${NC}
   $0 ./website ./search.json
   $0 ./website -e "*/node_modules/*" -e "*/vendor/*"
+  $0 -p ./website ./search.json  # Pretty-printed JSON
   $0 ./website ./output.json -f .searchignore -b "https://example.com"
 
-${BOLD}Version:${NC} 3.0.0
+${BOLD}Version:${NC} 3.1.0
 EOF
 }
 
 # Show version
 show_version() {
-    echo "Static Website Search Index Generator v3.0.0 (htmlq edition)"
+    echo "Static Website Search Index Generator v3.1.0 (Minified JSON)"
 }
 
 # Load exclude patterns from file
@@ -222,104 +197,14 @@ print_progress() {
     fi
 }
 
-# Extract page title using htmlq
-extract_title_htmlq() {
+# Extract page title
+extract_title() {
     local file="$1"
     
-    # Try htmlq first
-    if [ "$USE_HTMLQ" = true ]; then
-        local title=$(htmlq -t 'title' "$file" 2>/dev/null | \
-            head -1 | \
-            sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        
-        if [ -n "$title" ] && [ "$title" != "" ]; then
-            echo "$title"
-            return 0
-        fi
-    fi
-    
-    # Try pup as alternative
-    if [ "$USE_PUP" = true ]; then
-        local title=$(pup 'title text{}' < "$file" 2>/dev/null | \
-            head -1 | \
-            sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        
-        if [ -n "$title" ] && [ "$title" != "" ]; then
-            echo "$title"
-            return 0
-        fi
-    fi
-    
-    # Return empty if no title found
-    echo ""
-}
-
-# Extract meta description using htmlq
-extract_description_htmlq() {
-    local file="$1"
-    
-    # Try htmlq first
-    if [ "$USE_HTMLQ" = true ]; then
-        # Try meta[name="description"] first
-        local description=$(htmlq -a content 'meta[name="description"]' "$file" 2>/dev/null | \
-            head -1 | \
-            sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        
-        if [ -z "$description" ]; then
-            # Try meta[property="og:description"]
-            description=$(htmlq -a content 'meta[property="og:description"]' "$file" 2>/dev/null | \
-                head -1 | \
-                sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        fi
-        
-        if [ -z "$description" ]; then
-            # Try any meta with description
-            description=$(htmlq -a content 'meta' "$file" 2>/dev/null | \
-                grep -i "description" | \
-                head -1 | \
-                sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        fi
-        
-        if [ -n "$description" ] && [ "$description" != "" ]; then
-            echo "$description"
-            return 0
-        fi
-    fi
-    
-    # Try pup as alternative
-    if [ "$USE_PUP" = true ]; then
-        local description=$(pup 'meta[name="description"] attr{content}' < "$file" 2>/dev/null | \
-            head -1 | \
-            sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        
-        if [ -z "$description" ]; then
-            description=$(pup 'meta[property="og:description"] attr{content}' < "$file" 2>/dev/null | \
-                head -1 | \
-                sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        fi
-        
-        if [ -n "$description" ] && [ "$description" != "" ]; then
-            echo "$description"
-            return 0
-        fi
-    fi
-    
-    # Return empty if no description found
-    echo ""
-}
-
-# Fallback title extraction using regex
-extract_title_regex() {
-    local file="$1"
-    
-    # Try multiple methods
-    local title=""
-    
-    # Method 1: awk with better regex
-    title=$(awk '
+    # Method 1: Using awk
+    local title=$(awk '
     BEGIN { RS="</title>"; IGNORECASE=1 }
     /<title[^>]*>/ {
-        # Extract everything between > and </title>
         match($0, /<title[^>]*>([^<]*)<\/title>/, arr)
         if (arr[1] != "") {
             print arr[1]
@@ -328,7 +213,7 @@ extract_title_regex() {
     }
     ' "$file" 2>/dev/null | head -1)
     
-    # Method 2: grep with Perl regex
+    # Method 2: Using grep
     if [ -z "$title" ]; then
         title=$(grep -i -z -o '<title[^>]*>[^<]*</title>' "$file" 2>/dev/null | \
             tr '\0' '\n' | \
@@ -345,58 +230,10 @@ extract_title_regex() {
             sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     fi
     
-    # Clean and limit
+    # Clean up
     if [ -n "$title" ]; then
         title=$(echo "$title" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
         title=$(echo "$title" | cut -c 1-200)
-    fi
-    
-    echo "$title"
-}
-
-# Fallback description extraction using regex
-extract_description_regex() {
-    local file="$1"
-    
-    local description=""
-    
-    # Try multiple patterns
-    description=$(grep -i -E '<meta[^>]*name[[:space:]]*=[[:space:]]*["'\'']description["'\''][^>]*>' "$file" 2>/dev/null | \
-        head -1 | \
-        sed -E 's/.*content[[:space:]]*=[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\1/i')
-    
-    if [ -z "$description" ]; then
-        description=$(grep -i -E '<meta[^>]*content[[:space:]]*=[[:space:]]*["'\''][^"'\'']*["'\''][^>]*name[[:space:]]*=[[:space:]]*["'\'']description["'\''][^>]*>' "$file" 2>/dev/null | \
-            head -1 | \
-            sed -E 's/.*content[[:space:]]*=[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\1/i')
-    fi
-    
-    if [ -z "$description" ]; then
-        description=$(grep -i -E '<meta[^>]*property[[:space:]]*=[[:space:]]*["'\'']og:description["'\''][^>]*>' "$file" 2>/dev/null | \
-            head -1 | \
-            sed -E 's/.*content[[:space:]]*=[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\1/i')
-    fi
-    
-    # Clean and limit
-    if [ -n "$description" ]; then
-        description=$(echo "$description" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
-        description=$(echo "$description" | cut -c 1-500)
-    fi
-    
-    echo "$description"
-}
-
-# Main extraction function
-extract_title() {
-    local file="$1"
-    local title=""
-    
-    # Try htmlq/pup first
-    title=$(extract_title_htmlq "$file")
-    
-    # Fallback to regex if needed
-    if [ -z "$title" ] || [ "$title" = "" ]; then
-        title=$(extract_title_regex "$file")
     fi
     
     # Use filename as fallback
@@ -408,17 +245,35 @@ extract_title() {
     echo "$title"
 }
 
-# Main extraction function
+# Extract meta description
 extract_description() {
     local file="$1"
+    
     local description=""
     
-    # Try htmlq/pup first
-    description=$(extract_description_htmlq "$file")
+    # Pattern 1: Standard meta description
+    description=$(grep -i -E '<meta[^>]*name[[:space:]]*=[[:space:]]*["'\'']description["'\''][^>]*>' "$file" 2>/dev/null | \
+        head -1 | \
+        sed -E 's/.*content[[:space:]]*=[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\1/i')
     
-    # Fallback to regex if needed
-    if [ -z "$description" ] || [ "$description" = "" ]; then
-        description=$(extract_description_regex "$file")
+    # Pattern 2: Different attribute order
+    if [ -z "$description" ]; then
+        description=$(grep -i -E '<meta[^>]*content[[:space:]]*=[[:space:]]*["'\''][^"'\'']*["'\''][^>]*name[[:space:]]*=[[:space:]]*["'\'']description["'\''][^>]*>' "$file" 2>/dev/null | \
+            head -1 | \
+            sed -E 's/.*content[[:space:]]*=[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\1/i')
+    fi
+    
+    # Pattern 3: Open Graph description
+    if [ -z "$description" ]; then
+        description=$(grep -i -E '<meta[^>]*property[[:space:]]*=[[:space:]]*["'\'']og:description["'\''][^>]*>' "$file" 2>/dev/null | \
+            head -1 | \
+            sed -E 's/.*content[[:space:]]*=[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\1/i')
+    fi
+    
+    # Clean up
+    if [ -n "$description" ]; then
+        description=$(echo "$description" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr -s ' ')
+        description=$(echo "$description" | cut -c 1-500)
     fi
     
     echo "$description"
@@ -489,14 +344,9 @@ process_batch() {
             echo "," >> "$output_file"
         fi
         
+        # MINIFIED JSON OUTPUT
         cat >> "$output_file" << EOF
-  {
-    "url": ${url},
-    "title": ${title},
-    "description": ${description},
-    "path": ${rel_path},
-    "filename": ${filename}
-  }
+{"url":${url},"title":${title},"description":${description},"path":${rel_path},"filename":${filename}}
 EOF
         
         FILE_COUNT=$((FILE_COUNT + 1))
@@ -507,19 +357,21 @@ EOF
 generate_index() {
     local site_dir="$1"
     local output_file="$2"
+    local pretty_print=false
+    
+    # Check for pretty print option
+    for arg in "$@"; do
+        if [ "$arg" = "-p" ] || [ "$arg" = "--pretty" ]; then
+            pretty_print=true
+            break
+        fi
+    done
     
     if [ "$QUIET" = false ]; then
         echo -e "${BLUE}🔍 Starting search index generation...${NC}"
         echo -e "${BLUE}📁 Scanning directory:${NC} $site_dir"
         echo -e "${BLUE}📄 Output file:${NC} $output_file"
-        
-        if [ "$USE_HTMLQ" = true ]; then
-            echo -e "${GREEN}⚡ HTML parser:${NC} htmlq"
-        elif [ "$USE_PUP" = true ]; then
-            echo -e "${GREEN}⚡ HTML parser:${NC} pup"
-        else
-            echo -e "${YELLOW}⚡ HTML parser:${NC} regex (fallback)"
-        fi
+        echo -e "${BLUE}📦 Output format:${NC} $(if [ "$pretty_print" = true ]; then echo "Pretty-printed JSON"; else echo "Minified JSON"; fi)"
         
         if [ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]; then
             echo -e "${BLUE}🚫 Excluding patterns:${NC} ${#EXCLUDE_PATTERNS[@]} patterns"
@@ -624,14 +476,23 @@ generate_index() {
     fi
     
     # Close JSON array
-    echo -e "\n]" >> "$output_file"
+    echo "]" >> "$output_file"
     
     # Format JSON
     if [ "$QUIET" = false ]; then
-        echo -e "\n${CYAN}📦 Formatting JSON output...${NC}"
+        if [ "$pretty_print" = true ]; then
+            echo -e "\n${CYAN}📦 Formatting pretty JSON output...${NC}"
+        else
+            echo -e "\n${CYAN}📦 Minifying JSON output...${NC}"
+        fi
     fi
     
-    jq '.' "$output_file" > "$output_file.formatted"
+    # MINIFIED JSON FORMATTING
+    if [ "$pretty_print" = true ]; then
+        jq '.' "$output_file" > "$output_file.formatted"
+    else
+        jq -c '.' "$output_file" > "$output_file.formatted"
+    fi
     mv "$output_file.formatted" "$output_file"
     
     # Calculate statistics
@@ -652,6 +513,12 @@ generate_index() {
             echo -e "  ${BLUE}⚡${NC}  Speed: $((FILE_COUNT / elapsed_time)) pages/second"
         fi
         
+        # Show compression ratio
+        if [ -f "$TEMP_DIR/all_files.txt" ]; then
+            local original_lines=$(wc -l < "$TEMP_DIR/all_files.txt")
+            echo -e "  ${BLUE}📈${NC}  Index ratio: $((original_lines * 100 / FILE_COUNT))% coverage"
+        fi
+        
         echo -e "\n${YELLOW}📋 Next steps:${NC}"
         echo "1. Place '$output_file' in your website's directory"
         echo "2. Update search-index.json path in search.html if needed"
@@ -659,8 +526,8 @@ generate_index() {
         
         if [ "$FILE_COUNT" -gt 1000 ]; then
             echo -e "\n${CYAN}💡 Performance Tip:${NC}"
-            echo "• Search index loads in background"
-            echo "• Client-side search is fast and responsive"
+            echo "• Minified JSON loads faster in browsers"
+            echo "• Smaller file size reduces bandwidth usage"
         fi
     fi
 }
@@ -670,6 +537,7 @@ parse_arguments() {
     SITE_DIR=""
     OUTPUT_FILE=""
     EXCLUDE_PATTERNS=("${DEFAULT_EXCLUDE_PATTERNS[@]}")
+    PRETTY_PRINT=false
     
     # Parse positional arguments
     while [[ $# -gt 0 ]]; do
@@ -681,6 +549,10 @@ parse_arguments() {
             --version)
                 show_version
                 exit 0
+                ;;
+            -p|--pretty)
+                PRETTY_PRINT=true
+                shift
                 ;;
             -*)
                 break
@@ -725,6 +597,10 @@ parse_arguments() {
                 VERBOSE=true
                 shift
                 ;;
+            -p|--pretty)
+                PRETTY_PRINT=true
+                shift
+                ;;
             -*)
                 echo -e "${RED}Error: Unknown option: $1${NC}" >&2
                 show_usage
@@ -752,14 +628,14 @@ main() {
         echo -e "${DIM}══════════════════════════════════════════════${NC}"
         echo -e "Scan directory:  ${CYAN}$SITE_DIR${NC}"
         echo -e "Output file:     ${CYAN}$OUTPUT_FILE${NC}"
-        echo -e "HTML parser:     ${CYAN}$(if [ "$USE_HTMLQ" = true ]; then echo "htmlq"; elif [ "$USE_PUP" = true ]; then echo "pup"; else echo "regex (fallback)"; fi)${NC}"
+        echo -e "Output format:   ${CYAN}$(if [ "$PRETTY_PRINT" = true ]; then echo "Pretty-printed JSON"; else echo "Minified JSON"; fi)${NC}"
         echo -e "Exclude patterns: ${#EXCLUDE_PATTERNS[@]}"
         [ -n "$BASE_URL" ] && echo -e "Base URL:        ${CYAN}$BASE_URL${NC}"
         echo -e "Force overwrite: ${CYAN}$FORCE${NC}"
         echo -e "${DIM}══════════════════════════════════════════════${NC}\n"
     fi
     
-    generate_index "$SITE_DIR" "$OUTPUT_FILE"
+    generate_index "$SITE_DIR" "$OUTPUT_FILE" $(if [ "$PRETTY_PRINT" = true ]; then echo "-p"; fi)
 }
 
 # Run
