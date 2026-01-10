@@ -47,6 +47,30 @@
             margin-bottom: 20px;
         }
 
+        .search-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .items-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .items-selector select {
+            padding: 5px;
+            border: 2px solid #000;
+            background: #fff;
+            font-weight: bold;
+            outline: none;
+        }
+
         #searchInput {
             flex: 1;
             padding: 12px;
@@ -157,6 +181,12 @@
                 <input type="text" id="searchInput" data-en-placeholder="Search site content..." data-zh-placeholder="搜索网站内容..." placeholder="Search site content...">
                 <button id="searchButton" data-en="Search" data-zh="搜索">Search</button>
             </div>
+            <div class="search-controls">
+                <div class="items-selector">
+                    <label for="itemsPerPage" data-en="Items per page (0 for all):" data-zh="每页显示 (0为全部):">Items per page (0 for all):</label>
+                    <input type="number" id="itemsPerPage" min="0" value="5" style="width: 60px; padding: 5px; border: 2px solid #000; background: #fff; font-weight: bold; outline: none;">
+                </div>
+            </div>
             <div class="results-container" id="resultsList"></div>
             <div class="pagination" id="pagination" style="display: none;">
                 <button id="prevPage" class="page-btn" data-en="Prev" data-zh="上一页">Prev</button>
@@ -179,12 +209,13 @@
             const prevPage = document.getElementById('prevPage');
             const nextPage = document.getElementById('nextPage');
             const pageInfo = document.getElementById('pageInfo');
+            const itemsPerPageSelector = document.getElementById('itemsPerPage');
             
             let searchIndex = [];
             let index = null;
             let currentResults = [];
             let currentPage = 1;
-            const resultsPerPage = 5;
+            let resultsPerPage = parseInt(itemsPerPageSelector.value);
 
             try {
                 const response = await fetch('search-index.json');
@@ -206,9 +237,15 @@
 
             function displayResults() {
                 resultsList.innerHTML = '';
-                const start = (currentPage - 1) * resultsPerPage;
-                const end = start + resultsPerPage;
-                const paginatedItems = currentResults.slice(start, end);
+                
+                let paginatedItems;
+                if (resultsPerPage === 0) {
+                    paginatedItems = currentResults;
+                } else {
+                    const start = (currentPage - 1) * resultsPerPage;
+                    const end = start + resultsPerPage;
+                    paginatedItems = currentResults.slice(start, end);
+                }
 
                 if (currentResults.length === 0) {
                     resultsList.innerHTML = `<div class="no-results" data-en="No results found" data-zh="未找到结果">No results found</div>`;
@@ -229,14 +266,18 @@
                 });
 
                 // Update pagination UI
-                const totalPages = Math.ceil(currentResults.length / resultsPerPage);
-                if (totalPages > 1) {
-                    pagination.style.display = 'flex';
-                    const lang = document.documentElement.lang || 'en';
-                    const pageText = lang === 'zh' ? `第 ${currentPage} / ${totalPages} 页` : `Page ${currentPage} of ${totalPages}`;
-                    pageInfo.textContent = pageText;
-                    prevPage.disabled = currentPage === 1;
-                    nextPage.disabled = currentPage === totalPages;
+                if (resultsPerPage > 0) {
+                    const totalPages = Math.ceil(currentResults.length / resultsPerPage);
+                    if (totalPages > 1) {
+                        pagination.style.display = 'flex';
+                        const lang = document.documentElement.lang || 'en';
+                        const pageText = lang === 'zh' ? `第 ${currentPage} / ${totalPages} 页` : `Page ${currentPage} of ${totalPages}`;
+                        pageInfo.textContent = pageText;
+                        prevPage.disabled = currentPage === 1;
+                        nextPage.disabled = currentPage === totalPages;
+                    } else {
+                        pagination.style.display = 'none';
+                    }
                 } else {
                     pagination.style.display = 'none';
                 }
@@ -254,6 +295,14 @@
                 currentPage = 1;
                 displayResults();
             }
+
+            itemsPerPageSelector.addEventListener('input', () => {
+                let val = parseInt(itemsPerPageSelector.value);
+                if (isNaN(val) || val < 0) val = 0;
+                resultsPerPage = val;
+                currentPage = 1;
+                displayResults();
+            });
 
             searchButton.addEventListener('click', performSearch);
             searchInput.addEventListener('keypress', e => {
