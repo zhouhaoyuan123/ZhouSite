@@ -183,13 +183,8 @@
             </div>
             <div class="search-controls">
                 <div class="items-selector">
-                    <label for="itemsPerPage" data-en="Items per page:" data-zh="每页显示:">Items per page:</label>
-                    <select id="itemsPerPage">
-                        <option value="5">5</option>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="0" data-en="All" data-zh="全部">All</option>
-                    </select>
+                    <label for="itemsPerPage" data-en="Items per page (0 for all):" data-zh="每页显示 (0为全部):">Items per page (0 for all):</label>
+                    <input type="number" id="itemsPerPage" min="0" value="5" style="width: 60px; padding: 5px; border: 2px solid #000; background: #fff; font-weight: bold; outline: none;">
                 </div>
             </div>
             <div class="results-container" id="resultsList"></div>
@@ -301,8 +296,10 @@
                 displayResults();
             }
 
-            itemsPerPageSelector.addEventListener('change', () => {
-                resultsPerPage = parseInt(itemsPerPageSelector.value);
+            itemsPerPageSelector.addEventListener('input', () => {
+                let val = parseInt(itemsPerPageSelector.value);
+                if (isNaN(val) || val < 0) val = 0;
+                resultsPerPage = val;
                 currentPage = 1;
                 displayResults();
             });
