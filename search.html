@@ -157,11 +157,17 @@
             color: #333;
         }
 
-        .no-results {
+        .no-results, .loading-hint, .error-tip {
             text-align: center;
             padding: 40px;
             border: 2px dashed #000;
             color: #666;
+            margin-top: 20px;
+        }
+
+        .error-tip {
+            border-color: #f00;
+            color: #f00;
         }
     </style>
 </head>
@@ -187,7 +193,9 @@
                     <input type="number" id="itemsPerPage" min="0" value="5" style="width: 60px; padding: 5px; border: 2px solid #000; background: #fff; font-weight: bold; outline: none;">
                 </div>
             </div>
-            <div class="results-container" id="resultsList"></div>
+            <div class="results-container" id="resultsList">
+                <div class="loading-hint" data-en="Loading search index..." data-zh="正在加载搜索索引...">Loading search index...</div>
+            </div>
             <div class="pagination" id="pagination" style="display: none;">
                 <button id="prevPage" class="page-btn" data-en="Prev" data-zh="上一页">Prev</button>
                 <div class="page-info" id="pageInfo"></div>
@@ -219,6 +227,7 @@
 
             try {
                 const response = await fetch('search-index.json');
+                if (!response.ok) throw new Error('Failed to fetch search-index.json');
                 searchIndex = await response.json();
                 
                 // Initialize FlexSearch
@@ -231,8 +240,12 @@
                     const content = `${page.title} ${page.description} ${page.url}`;
                     index.add(id, content);
                 });
+                
+                // Clear loading hint once ready
+                resultsList.innerHTML = '';
             } catch (e) {
                 console.error('Failed to load search index', e);
+                resultsList.innerHTML = `<div class="error-tip" data-en="Failed to load search index. Please try again later." data-zh="加载搜索索引失败，请稍后重试。">Failed to load search index. Please try again later.</div>`;
             }
 
             function displayResults() {
@@ -283,17 +296,33 @@
                 }
             }
 
-            function performSearch() {
+            async function performSearch() {
                 const query = searchInput.value.trim();
-                if (!query || !index) {
+                if (!query) {
                     resultsList.innerHTML = '';
                     pagination.style.display = 'none';
                     return;
                 }
 
-                currentResults = index.search(query);
-                currentPage = 1;
-                displayResults();
+                if (!index) {
+                    resultsList.innerHTML = `<div class="error-tip" data-en="Search engine is not ready." data-zh="搜索引擎未就绪。">Search engine is not ready.</div>`;
+                    return;
+                }
+
+                resultsList.innerHTML = `<div class="loading-hint" data-en="Searching..." data-zh="搜索中...">Searching...</div>`;
+                pagination.style.display = 'none';
+
+                // Give UI time to update
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                try {
+                    currentResults = index.search(query);
+                    currentPage = 1;
+                    displayResults();
+                } catch (e) {
+                    console.error('Search failed', e);
+                    resultsList.innerHTML = `<div class="error-tip" data-en="An error occurred while searching." data-zh="搜索过程中出错。">An error occurred while searching.</div>`;
+                }
             }
 
             itemsPerPageSelector.addEventListener('input', () => {
