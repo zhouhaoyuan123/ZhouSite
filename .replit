@@ -11,7 +11,7 @@ deploymentTarget = "static"
 build = ["sh", "-c", "./build.sh && ./build_search.sh ./dist ./dist/search-index.json"]
 
 [workflows]
-runButton = "Project"
+runButton = "Serve static"
 
 [[workflows.workflow]]
 name = "Serve static"
@@ -29,33 +29,8 @@ waitForPort = 80
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Server"
-
-[[workflows.workflow]]
-name = "Server"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python3 -m http.server 5000"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[ports]]
 localPort = 80
-externalPort = 80
-
-[[ports]]
-localPort = 5000
 externalPort = 80
 
 [agent]
