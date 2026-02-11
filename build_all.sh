@@ -1,0 +1,1 @@
+./build.sh && ./build_search.sh ./dist ./dist/search-index.json
