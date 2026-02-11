@@ -172,6 +172,7 @@
                     <label for="itemsPerPage" data-en="Items per page (0 for all):" data-zh="每页显示 (0为全部):">Items per page (0 for all):</label>
                     <input type="number" id="itemsPerPage" min="0" value="5" style="width: 60px; padding: 5px; border: 2px solid #000; background: #fff; font-weight: bold; outline: none;">
                 </div>
+                <button id="randomButton" class="page-btn" data-en="Random" data-zh="随机">Random</button>
             </div>
             <div class="results-container" id="resultsList">
                 <div class="loading-hint" data-en="Loading search index..." data-zh="正在加载搜索索引...">Loading search index...</div>
@@ -198,12 +199,14 @@
             const nextPage = document.getElementById('nextPage');
             const pageInfo = document.getElementById('pageInfo');
             const itemsPerPageSelector = document.getElementById('itemsPerPage');
-            
+            const randomButton = document.getElementById('randomButton');
+
             let searchIndex = [];
             let index = null;
             let currentResults = [];
             let currentPage = 1;
             let resultsPerPage = parseInt(itemsPerPageSelector.value);
+            if (randomButton) randomButton.disabled = true;
 
             try {
                 const response = await fetch('search-index.json');
@@ -223,6 +226,15 @@
                 
                 // Clear loading hint once ready
                 resultsList.innerHTML = '';
+                // Set up random button
+                if (randomButton) {
+                    randomButton.disabled = searchIndex.length === 0;
+                    randomButton.addEventListener('click', () => {
+                        if (!searchIndex || searchIndex.length === 0) return;
+                        const rand = Math.floor(Math.random() * searchIndex.length);
+                        window.location.href = searchIndex[rand].url;
+                    });
+                }
             } catch (e) {
                 console.error('Failed to load search index', e);
                 resultsList.innerHTML = `<div class="error-tip" data-en="Failed to load search index. Please try again later." data-zh="加载搜索索引失败，请稍后重试。">Failed to load search index. Please try again later.</div>`;
