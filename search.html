@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Search Zhou Site - Find games, tools, and content across the site. 在周 站搜索 - 查找全站的游戏、工具和内容。">
+    <meta name="description"
+        content="Search Zhou Site - Find games, tools, and content across the site. 在周 站搜索 - 查找全站的游戏、工具和内容。">
     <meta name="keywords" content="search, find, Zhou Site, games, tools">
     <title data-en="Search - Zhou Site" data-zh="搜索 - 周 站">Search - Zhou Site</title>
     <link rel="stylesheet" href="index_styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
-        
-
         .search-wrapper {
             background: #fff;
             border: 2px solid #000;
@@ -137,7 +137,9 @@
             color: #333;
         }
 
-        .no-results, .loading-hint, .error-tip {
+        .no-results,
+        .loading-hint,
+        .error-tip {
             text-align: center;
             padding: 40px;
             border: 2px dashed #000;
@@ -151,6 +153,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="lang-switch">
         <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
@@ -164,19 +167,32 @@
 
         <div class="search-wrapper">
             <div class="search-box">
-                <input type="text" id="searchInput" data-en-placeholder="Search site content..." data-zh-placeholder="搜索网站内容..." placeholder="Search site content...">
+                <input type="text" id="searchInput" data-en-placeholder="Search site content..."
+                    data-zh-placeholder="搜索网站内容..." placeholder="Search site content...">
                 <button id="searchButton" data-en="Search" data-zh="搜索">Search</button>
             </div>
             <div class="search-controls">
                 <div class="items-selector">
-                    <label for="itemsPerPage" data-en="Items per page (0 for all):" data-zh="每页显示 (0为全部):">Items per page (0 for all):</label>
-                    <input type="number" id="itemsPerPage" min="0" value="5" style="width: 60px; padding: 5px; border: 2px solid #000; background: #fff; font-weight: bold; outline: none;">
+                    <label for="itemsPerPage" data-en="Items per page (0 for all):" data-zh="每页显示 (0为全部):">Items per
+                        page (0 for all):</label>
+                    <input type="number" id="itemsPerPage" min="0" value="5"
+                        style="width: 60px; padding: 5px; border: 2px solid #000; background: #fff; font-weight: bold; outline: none;">
                 </div>
-                <button id="blogSearchButton" class="page-btn" data-en="Search in Blog" data-zh="在博客中搜索">Search in Blog</button>
+                <button id="blogSearchButton" class="page-btn" data-en="Search in Blog" data-zh="在博客中搜索">Search in
+                    Blog</button>
                 <button id="randomButton" class="page-btn" data-en="Random" data-zh="随机">Random</button>
             </div>
             <div class="results-container" id="resultsList">
-                <div class="loading-hint" data-en="Loading search index..." data-zh="正在加载搜索索引...">Loading search index...</div>
+                <div id="loadingIndex" class="loading-hint" data-en="Loading search index..." data-zh="正在加载搜索索引..." style="display: block;">Loading search index...</div>
+                <div id="loadingSearch" class="loading-hint" data-en="Searching..." data-zh="搜索中..." style="display: none;">Searching...</div>
+
+                <div id="noResults" class="no-results" data-en="No results found" data-zh="未找到结果" style="display: none;">No results found</div>
+
+                <div id="errorLoadIndex" class="error-tip" data-en="Failed to load search index. Please try again later." data-zh="加载搜索索引失败，请稍后重试。" style="display: none;">Failed to load search index. Please try again later.</div>
+                <div id="errorEngineNotReady" class="error-tip" data-en="Search engine is not ready." data-zh="搜索引擎未就绪。" style="display: none;">Search engine is not ready.</div>
+                <div id="errorSearchFailed" class="error-tip" data-en="An error occurred while searching." data-zh="搜索过程中出错。" style="display: none;">An error occurred while searching.</div>
+
+                <div id="resultsItems"></div>
             </div>
             <div class="pagination" id="pagination" style="display: none;">
                 <button id="prevPage" class="page-btn" data-en="Prev" data-zh="上一页">Prev</button>
@@ -195,6 +211,13 @@
             const searchInput = document.getElementById('searchInput');
             const searchButton = document.getElementById('searchButton');
             const resultsList = document.getElementById('resultsList');
+            const resultsItems = document.getElementById('resultsItems');
+            const loadingIndex = document.getElementById('loadingIndex');
+            const loadingSearch = document.getElementById('loadingSearch');
+            const noResultsHint = document.getElementById('noResults');
+            const errorLoadIndex = document.getElementById('errorLoadIndex');
+            const errorEngineNotReady = document.getElementById('errorEngineNotReady');
+            const errorSearchFailed = document.getElementById('errorSearchFailed');
             const pagination = document.getElementById('pagination');
             const prevPage = document.getElementById('prevPage');
             const nextPage = document.getElementById('nextPage');
@@ -210,11 +233,19 @@
             let resultsPerPage = parseInt(itemsPerPageSelector.value);
             if (randomButton) randomButton.disabled = true;
 
+            function hideAllHints() {
+                [loadingIndex, loadingSearch, noResultsHint, errorLoadIndex, errorEngineNotReady, errorSearchFailed].forEach(el => {
+                    if (el) el.style.display = 'none';
+                });
+            }
+
+            function showHint(el) { hideAllHints(); if (el) el.style.display = 'block'; }
+
             try {
                 const response = await fetch('search-index.json');
                 if (!response.ok) throw new Error('Failed to fetch search-index.json');
                 searchIndex = await response.json();
-                
+
                 // Initialize FlexSearch
                 index = new FlexSearch.Index({
                     tokenize: "forward",
@@ -225,9 +256,10 @@
                     const content = `${page.title} ${page.description} ${page.url}`;
                     index.add(id, content);
                 });
-                
-                // Clear loading hint once ready
-                resultsList.innerHTML = '';
+
+                // Clear results items and hide hints once ready
+                if (resultsItems) resultsItems.innerHTML = '';
+                hideAllHints();
                 // Set up random button
                 if (randomButton) {
                     randomButton.disabled = searchIndex.length === 0;
@@ -248,12 +280,13 @@
                 }
             } catch (e) {
                 console.error('Failed to load search index', e);
-                resultsList.innerHTML = `<div class="error-tip" data-en="Failed to load search index. Please try again later." data-zh="加载搜索索引失败，请稍后重试。">Failed to load search index. Please try again later.</div>`;
+                // Show the pre-defined load-index error hint (texts are in data-* attributes)
+                showHint(errorLoadIndex);
             }
 
             function displayResults() {
-                resultsList.innerHTML = '';
-                
+                if (resultsItems) resultsItems.innerHTML = '';
+
                 let paginatedItems;
                 if (resultsPerPage === 0) {
                     paginatedItems = currentResults;
@@ -264,7 +297,7 @@
                 }
 
                 if (currentResults.length === 0) {
-                    resultsList.innerHTML = `<div class="no-results" data-en="No results found" data-zh="未找到结果">No results found</div>`;
+                    showHint(noResultsHint);
                     pagination.style.display = 'none';
                     return;
                 }
@@ -278,7 +311,7 @@
                         <div class="result-title">${item.title}</div>
                         <div class="result-description">${item.description}</div>
                     `;
-                    resultsList.appendChild(div);
+                    if (resultsItems) resultsItems.appendChild(div);
                 });
 
                 // Update pagination UI
@@ -304,17 +337,19 @@
                 if (!query) {
                     currentResults = [];
                     currentPage = 1;
-                    resultsList.innerHTML = '';
+                    if (resultsItems) resultsItems.innerHTML = '';
+                    hideAllHints();
                     pagination.style.display = 'none';
                     return;
                 }
 
                 if (!index) {
-                    resultsList.innerHTML = `<div class="error-tip" data-en="Search engine is not ready." data-zh="搜索引擎未就绪。">Search engine is not ready.</div>`;
+                    showHint(errorEngineNotReady);
                     return;
                 }
 
-                resultsList.innerHTML = `<div class="loading-hint" data-en="Searching..." data-zh="搜索中...">Searching...</div>`;
+                // Show the pre-defined searching loading hint (text comes from data-* attributes)
+                showHint(loadingSearch);
                 pagination.style.display = 'none';
 
                 // Give UI time to update
@@ -326,7 +361,8 @@
                     displayResults();
                 } catch (e) {
                     console.error('Search failed', e);
-                    resultsList.innerHTML = `<div class="error-tip" data-en="An error occurred while searching." data-zh="搜索过程中出错。">An error occurred while searching.</div>`;
+                    // show pre-defined search-failed error hint
+                    showHint(errorSearchFailed);
                 }
             }
 
@@ -360,14 +396,24 @@
                 }
             });
 
-            // Update placeholder on lang change
+            // Update placeholder and hint texts on lang change
             const originalSetLang = window.setLang;
+            function applyI18nText(el, lang) {
+                if (!el) return;
+                const attr = el.getAttribute(`data-${lang}`);
+                if (attr) el.textContent = attr;
+            }
+
             window.setLang = (lang) => {
                 originalSetLang(lang);
                 document.documentElement.lang = lang;
                 if (searchInput) {
                     searchInput.placeholder = searchInput.getAttribute(`data-${lang}-placeholder`);
                 }
+
+                // Apply i18n to all known hint elements
+                [loadingIndex, loadingSearch, noResultsHint, errorLoadIndex, errorEngineNotReady, errorSearchFailed].forEach(el => applyI18nText(el, lang));
+
                 // Refresh pagination text if results exist
                 if (currentResults.length > 0) {
                     displayResults();
@@ -376,4 +422,5 @@
         });
     </script>
 </body>
+
 </html>
