@@ -302,6 +302,8 @@
             async function performSearch() {
                 const query = searchInput.value.trim();
                 if (!query) {
+                    currentResults = [];
+                    currentPage = 1;
                     resultsList.innerHTML = '';
                     pagination.style.display = 'none';
                     return;
