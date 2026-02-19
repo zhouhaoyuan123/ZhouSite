@@ -286,6 +286,8 @@
 
             function displayResults() {
                 if (resultsItems) resultsItems.innerHTML = '';
+                // ensure any loading/error hints are hidden when we render results
+                hideAllHints();
 
                 let paginatedItems;
                 if (resultsPerPage === 0) {
