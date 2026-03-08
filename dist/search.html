@@ -335,19 +335,7 @@
                 }
             });
 
-            // Update placeholder on lang change
-            const originalSetLang = window.setLang;
-            window.setLang = (lang) => {
-                originalSetLang(lang);
-                document.documentElement.lang = lang;
-                if (searchInput) {
-                    searchInput.placeholder = searchInput.getAttribute(`data-${lang}-placeholder`);
-                }
-                // Refresh pagination text if results exist
-                if (currentResults.length > 0) {
-                    displayResults();
-                }
-            };
+
         });
     </script>
 </body>

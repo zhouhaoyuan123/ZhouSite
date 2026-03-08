@@ -398,29 +398,7 @@
                 }
             });
 
-            // Update placeholder and hint texts on lang change
-            const originalSetLang = window.setLang;
-            function applyI18nText(el, lang) {
-                if (!el) return;
-                const attr = el.getAttribute(`data-${lang}`);
-                if (attr) el.textContent = attr;
-            }
 
-            window.setLang = (lang) => {
-                originalSetLang(lang);
-                document.documentElement.lang = lang;
-                if (searchInput) {
-                    searchInput.placeholder = searchInput.getAttribute(`data-${lang}-placeholder`);
-                }
-
-                // Apply i18n to all known hint elements
-                [loadingIndex, loadingSearch, noResultsHint, errorLoadIndex, errorEngineNotReady, errorSearchFailed].forEach(el => applyI18nText(el, lang));
-
-                // Refresh pagination text if results exist
-                if (currentResults.length > 0) {
-                    displayResults();
-                }
-            };
         });
     </script>
 </body>

@@ -1,16 +1,26 @@
 function setLang(lang) {
     document.documentElement.lang = lang;
+
+    // Translate element text content
     document.querySelectorAll('[data-en]').forEach(el => {
         const translation = el.getAttribute('data-' + lang);
         if (translation !== null) {
             el.textContent = translation;
         }
     });
-    
+
+    // Translate placeholders for inputs/textarea
+    document.querySelectorAll('[data-en-placeholder]').forEach(el => {
+        const translation = el.getAttribute('data-' + lang + '-placeholder');
+        if (translation !== null && 'placeholder' in el) {
+            el.placeholder = translation;
+        }
+    });
+
     // Update active state of language buttons
     document.querySelectorAll('.lang-btn').forEach(btn => {
         // Try matching by id (btn-en, btn-zh) or by text content
-        const isMatch = btn.id === 'btn-' + lang || 
+        const isMatch = btn.id === 'btn-' + lang ||
                         btn.getAttribute('onclick')?.includes(`'${lang}'`) ||
                         btn.textContent.toLowerCase() === lang;
         btn.classList.toggle('active', isMatch);
