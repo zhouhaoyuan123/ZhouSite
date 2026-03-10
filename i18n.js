@@ -1,19 +1,29 @@
 function setLang(lang) {
     document.documentElement.lang = lang;
 
-    // Translate element text content
+    // Translate element text content (fallback to English when missing)
     document.querySelectorAll('[data-en]').forEach(el => {
         const translation = el.getAttribute('data-' + lang);
         if (translation !== null) {
             el.textContent = translation;
+        } else {
+            const fallback = el.getAttribute('data-en');
+            if (fallback !== null) {
+                el.textContent = fallback;
+            }
         }
     });
 
-    // Translate placeholders for inputs/textarea
+    // Translate placeholders for inputs/textarea (fallback to English when missing)
     document.querySelectorAll('[data-en-placeholder]').forEach(el => {
         const translation = el.getAttribute('data-' + lang + '-placeholder');
         if (translation !== null && 'placeholder' in el) {
             el.placeholder = translation;
+        } else {
+            const fallback = el.getAttribute('data-en-placeholder');
+            if (fallback !== null && 'placeholder' in el) {
+                el.placeholder = fallback;
+            }
         }
     });
 
