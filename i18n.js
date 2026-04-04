@@ -46,8 +46,13 @@ function getPreferredLanguage() {
     return language.split(",")[0];
 }
 
+function isLangSupported(lang) {
+    return document.querySelector('[data-' + lang + ']') !== null;
+}
+
 // Initial language setup
 document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('preferred_lang') || getPreferredLanguage();
-    setLang(savedLang);
+    const lang = isLangSupported(savedLang) ? savedLang : 'en';
+    setLang(lang);
 });
